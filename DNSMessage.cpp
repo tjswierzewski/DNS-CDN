@@ -1,6 +1,7 @@
 #include "DNSMessage.h"
+#include <cstring>
 
-DNSMessage::DNSMessage(uint16_t identification, int qr, int opcode, int aa, int tc, int rd, int ra, int rcode, int16_t numberOfQuestions, int16_t numberOfResourceRecords, int16_t numberOfAdditionalRecords)
+DNSMessage::DNSMessage(unsigned short int identification, int qr, int opcode, int aa, int tc, int rd, int ra, int rcode, unsigned short int numberOfQuestions, unsigned short int numberOfAnswerRecords, unsigned short int numberOfAuthorityRecords, unsigned short int numberOfAdditionalRecords)
 {
     this->identification = identification;
     this->flags = qr << 15;
@@ -11,8 +12,18 @@ DNSMessage::DNSMessage(uint16_t identification, int qr, int opcode, int aa, int 
     this->flags += ra << 7;
     this->flags += rcode;
     this->numberOfQuestions = numberOfQuestions;
-    this->numberOfResourceRecords = numberOfResourceRecords;
+    this->numberOfAnswerRecords = numberOfAnswerRecords;
+    this->numberOfAuthorityRecords = numberOfAuthorityRecords;
     this->numberOfAdditionalRecords = numberOfAdditionalRecords;
+}
+DNSMessage::DNSMessage(char *message, int size)
+{
+    this->identification = message[0] << 8 | message[1];
+    this->flags = message[2] << 8 | message[3];
+    this->numberOfQuestions = message[4] << 8 | message[5];
+    this->numberOfAnswerRecords = message[6] << 8 | message[7];
+    this->numberOfAuthorityRecords = message[8] << 8 | message[9];
+    this->numberOfAdditionalRecords = message[10] << 8 | message[11];
 }
 int DNSMessage::getIdentification()
 {
@@ -50,11 +61,15 @@ int DNSMessage::getNumberOfQuestions()
 {
     return this->numberOfQuestions;
 }
-int DNSMessage::getNumberOfResoureRecords()
+int DNSMessage::getNumberOfAnswerRecords()
 {
-    return this->numberOfResourceRecords;
+    return this->numberOfAnswerRecords;
+}
+int DNSMessage::getNumberOfAuthorityRecords()
+{
+    return this->numberOfAuthorityRecords;
 }
 int DNSMessage::getNumberOfAdditionalRecords()
 {
-    return this->numberOfAdditionalRecords
+    return this->numberOfAdditionalRecords;
 }

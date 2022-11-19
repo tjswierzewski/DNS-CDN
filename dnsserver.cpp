@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
+#include "DNSMessage.h"
 
 int main(int argc, char const *argv[])
 {
@@ -39,8 +40,8 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        recv(udp_fd, buffer, 1024, 0);
-        std::cout << buffer << std::endl;
+        int size = recv(udp_fd, buffer, 1024, 0);
+        DNSMessage query(buffer, size);
     }
 
     return 0;
