@@ -1,0 +1,27 @@
+#!/bin/bash
+
+while getopts 'p:o:n:u:i:' OPTION; do
+    case "$OPTION" in
+        p)
+            port=${OPTARG}
+            ;;
+        o)
+            origin=${OPTARG}
+            ;;
+        i)
+            keyfile=${OPTARG}
+            ;;
+        n)
+            servername=${OPTARG}
+            ;;
+        u)
+            username=${OPTARG}
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+#start DNS server
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+nohup ./dnsserver $port $servername > foo.out 2> foo.err < /dev/null &
+EOF
