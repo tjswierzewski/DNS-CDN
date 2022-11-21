@@ -24,6 +24,24 @@ DNSMessage::DNSMessage(char *message, int size)
     this->numberOfAnswerRecords = message[6] << 8 | message[7];
     this->numberOfAuthorityRecords = message[8] << 8 | message[9];
     this->numberOfAdditionalRecords = message[10] << 8 | message[11];
+    int offset = 12;
+    for (size_t i = 0; i < this->numberOfQuestions; i++)
+    {
+        this->questions.push_back(DNSQuestion(message + offset));
+        offset += this->questions.back().getMessageSize();
+    }
+    for (size_t i = 0; i < this->numberOfAnswerRecords; i++)
+    {
+        // Parse Answer Records
+    }
+    for (size_t i = 0; i < this->numberOfAuthorityRecords; i++)
+    {
+        // Parse Authority Records
+    }
+    for (size_t i = 0; i < this->numberOfAdditionalRecords; i++)
+    {
+        // Parse Authority Records
+    }
 }
 int DNSMessage::getIdentification()
 {
