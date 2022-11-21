@@ -3,3 +3,5 @@
 dnsserver
 *.o
 *.pcapng
+khoury_rsa
+*.bin

@@ -1,6 +1,6 @@
 CC = g++
 DFLAGS = -gdwarf-2 -g3 -O0 -D_GLIBCXX_DEBUG
-CFLAGS = -std=c++17
+CFLAGS = -std=c++11
 
 dnsserver: dnsserver.o DNSMessage.o DNSQuestion.o
 	${CC} $^ ${DFLAGS} ${CFLAGS} -o $@
@@ -16,4 +16,4 @@ DNSQuestion.o: DNSQuestion.cpp
 
 
 clean:
-	rm -f dnsserver *.o
+	rm -f dnsserver *.o *.pcapng
