@@ -1,5 +1,8 @@
-#include "DNSMessage.h"
+#include <netinet/in.h>
+#include <string>
+#include <sstream>
 #include <cstring>
+#include "DNSMessage.h"
 
 DNSMessage::DNSMessage(unsigned short int identification, int qr, int opcode, int aa, int tc, int rd, int ra, int rcode, unsigned short int numberOfQuestions, unsigned short int numberOfAnswerRecords, unsigned short int numberOfAuthorityRecords, unsigned short int numberOfAdditionalRecords)
 {
@@ -98,4 +101,47 @@ DNSQuestion *DNSMessage::getQuestion()
         return NULL;
     }
     return &this->questions.front();
+}
+void DNSMessage::addQuestion(DNSQuestion question)
+{
+    this->questions.push_back(question);
+    this->numberOfQuestions++;
+}
+void DNSMessage::addAnswer(DNSResponse answer)
+{
+    this->answers.push_back(answer);
+    this->numberOfAnswerRecords++;
+}
+std::string DNSMessage::format()
+{
+    std::string output;
+    output.push_back((char)(this->identification >> 8));
+    output.push_back((char)(this->identification & 255));
+    output.push_back((char)(this->flags >> 8));
+    output.push_back((char)(this->flags & 255));
+    output.push_back((char)(this->numberOfQuestions >> 8));
+    output.push_back((char)(this->numberOfQuestions & 255));
+    output.push_back((char)(this->numberOfAnswerRecords >> 8));
+    output.push_back((char)(this->numberOfAnswerRecords & 255));
+    output.push_back((char)(this->numberOfAuthorityRecords >> 8));
+    output.push_back((char)(this->numberOfAuthorityRecords & 255));
+    output.push_back((char)(this->numberOfAdditionalRecords >> 8));
+    output.push_back((char)(this->numberOfAdditionalRecords & 255));
+    for (size_t i = 0; i < this->numberOfQuestions; i++)
+    {
+        output += this->questions[i].format();
+    }
+    for (size_t i = 0; i < this->numberOfAnswerRecords; i++)
+    {
+        output += this->answers[i].format();
+    }
+    for (size_t i = 0; i < this->numberOfAuthorityRecords; i++)
+    {
+        // Write Authority Records
+    }
+    for (size_t i = 0; i < this->numberOfAdditionalRecords; i++)
+    {
+        // Write Authority Records
+    }
+    return output;
 }

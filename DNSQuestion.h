@@ -16,4 +16,5 @@ public:
     int getQType();
     int getQClass();
     int getMessageSize();
+    std::string format();
 };

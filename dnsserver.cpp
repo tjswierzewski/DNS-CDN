@@ -46,6 +46,11 @@ int main(int argc, char const *argv[])
         if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
         {
             std::cout << "I know that one" << std::endl;
+            DNSMessage answer(query.getIdentification(), 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
+            answer.addQuestion(*question);
+            std::string ip = "\x8B\x90\x1E\x19";
+            answer.addAnswer(DNSResponse(question->getName(), 1, 1, 10, 4, ip));
+            std::string message = answer.format();
         }
         else
         {

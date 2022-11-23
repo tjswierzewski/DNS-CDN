@@ -3,15 +3,14 @@
 class DNSResponse
 {
 private:
-    char nameLength;
     std::string name;
     unsigned short int type;
     unsigned short int dnsClass;
     unsigned int ttl;
     unsigned short int dataLength;
-    vector < ;
+    std::string data;
 
 public:
-    DNSResponse(std::string name, unsigned short int type, unsigned short int dnsClass, unsigned int ttl, unsigned short int, );
-    ~DNSResponse();
+    DNSResponse(std::string name, unsigned short int type, unsigned short int dnsClass, unsigned int ttl, unsigned short int, std::string data);
+    std::string format();
 };

@@ -1,5 +1,6 @@
 #include <vector>
 #include "DNSQuestion.h"
+#include "DNSResponse.h"
 
 class DNSMessage
 {
@@ -11,6 +12,7 @@ private:
     unsigned short int numberOfAuthorityRecords;
     unsigned short int numberOfAdditionalRecords;
     std::vector<DNSQuestion> questions;
+    std::vector<DNSResponse> answers;
 
 public:
     DNSMessage(unsigned short int identification, int qr, int opcode, int aa, int tc, int rd, int ra, int rcode, unsigned short int numberOfQuestions, unsigned short int numberOfAnswerRecords, unsigned short int numberOfAuthorityRecords, unsigned short int numberOfAdditionalRecords);
@@ -28,4 +30,7 @@ public:
     int getNumberOfAuthorityRecords();
     int getNumberOfAdditionalRecords();
     DNSQuestion *getQuestion();
+    void addQuestion(DNSQuestion question);
+    void addAnswer(DNSResponse answer);
+    std::string format();
 };
