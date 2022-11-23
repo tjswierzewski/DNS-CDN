@@ -7,7 +7,7 @@
 
 int main(int argc, char const *argv[])
 {
-    if (argc != 3)
+    if (argc != 5)
     {
         std::cout << "Usage: ./dnsserver -p <port> -n <name>" << std::endl;
         exit(EXIT_FAILURE);
@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
     memset((char *)&address, 0, sizeof(address));
 
     address.sin_family = AF_INET;
-    address.sin_port = htons(atoi(argv[1]));
+    address.sin_port = htons(atoi(argv[2]));
     address.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(udp_fd, (struct sockaddr *)&address, sizeof(address)) == -1)
@@ -42,6 +42,15 @@ int main(int argc, char const *argv[])
     {
         int size = recv(udp_fd, buffer, 1024, 0);
         DNSMessage query(buffer, size);
+        DNSQuestion *question;
+        if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
+        {
+            std::cout << "I know that one" << std::endl;
+        }
+        else
+        {
+            std::cout << "I don't know that one" << std::endl;
+        }
     }
 
     return 0;

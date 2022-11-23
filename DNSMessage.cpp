@@ -91,3 +91,11 @@ int DNSMessage::getNumberOfAdditionalRecords()
 {
     return this->numberOfAdditionalRecords;
 }
+DNSQuestion *DNSMessage::getQuestion()
+{
+    if (this->questions.size() <= 0)
+    {
+        return NULL;
+    }
+    return &this->questions.front();
+}

@@ -27,4 +27,5 @@ public:
     int getNumberOfAnswerRecords();
     int getNumberOfAuthorityRecords();
     int getNumberOfAdditionalRecords();
+    DNSQuestion *getQuestion();
 };
