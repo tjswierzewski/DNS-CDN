@@ -2,10 +2,9 @@
 
 DNSQuestion::DNSQuestion(char *message)
 {
-    this->nameLength = message[0];
-    this->name = std::string(message + 1, this->nameLength);
-    this->qType = message[1 + this->nameLength] << 8 | message[2 + this->nameLength];
-    this->qClass = message[3 + this->nameLength] << 8 | message[4 + this->nameLength];
+    this->readName(message);
+    this->qType = message[0 + this->nameLength] << 8 | message[1 + this->nameLength];
+    this->qClass = message[2 + this->nameLength] << 8 | message[3 + this->nameLength];
 }
 int DNSQuestion::getNameLength()
 {
@@ -25,5 +24,20 @@ int DNSQuestion::getQClass()
 }
 int DNSQuestion::getMessageSize()
 {
-    return this->nameLength + 5;
+    return this->nameLength + 4;
+}
+void DNSQuestion::readName(char *message)
+{
+    this->nameLength = 0;
+    this->name = std::string();
+    int segLength;
+    while ((segLength = message[this->nameLength]) > 0)
+    {
+        this->nameLength++;
+        this->name.append(message + this->nameLength, segLength);
+        this->name.append(".");
+        this->nameLength += segLength;
+    }
+    this->name.pop_back();
+    this->nameLength++;
 }

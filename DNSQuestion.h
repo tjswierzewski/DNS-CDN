@@ -7,6 +7,7 @@ private:
     std::string name;
     unsigned short int qType;
     unsigned short int qClass;
+    void readName(char *message);
 
 public:
     DNSQuestion(char *message);
