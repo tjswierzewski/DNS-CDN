@@ -52,7 +52,7 @@ std::string DNSQuestion::format()
     {
         delPos = this->name.find(".", pos);
         token = this->name.substr(pos, delPos - pos);
-        output.push_back((char)(delPos - pos));
+        output.push_back((char)token.size());
         output += token;
         pos = delPos + 1;
     } while (delPos != std::string::npos);

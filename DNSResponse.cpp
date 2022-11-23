@@ -17,15 +17,8 @@ std::string DNSResponse::format()
     std::string token;
     int pos = 0;
     int delPos;
-    do
-    {
-        delPos = this->name.find(".", pos);
-        token = this->name.substr(pos, delPos - pos);
-        output.push_back((char)(delPos - pos));
-        output += token;
-        pos = delPos + 1;
-    } while (delPos != std::string::npos);
-    output.push_back((char)0);
+    output.push_back((char)192);
+    output.push_back((char)12);
     output.push_back((char)(this->type >> 8));
     output.push_back((char)(this->type & 255));
     output.push_back((char)(this->dnsClass >> 8));

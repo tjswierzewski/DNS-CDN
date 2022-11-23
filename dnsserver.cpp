@@ -15,8 +15,10 @@ int main(int argc, char const *argv[])
 
     int udp_fd, udp_socket, valread;
     struct sockaddr_in address;
+    struct sockaddr_in clientAddress;
     int opt = 1;
     int addrlen = sizeof(address);
+    int clientAddrLen;
     char buffer[1024];
     std::string hello = "Hello from DNS Server";
 
@@ -40,17 +42,18 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        int size = recv(udp_fd, buffer, 1024, 0);
+        int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
         DNSMessage query(buffer, size);
         DNSQuestion *question;
         if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
         {
             std::cout << "I know that one" << std::endl;
-            DNSMessage answer(query.getIdentification(), 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
+            DNSMessage answer(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
             answer.addQuestion(*question);
             std::string ip = "\x8B\x90\x1E\x19";
             answer.addAnswer(DNSResponse(question->getName(), 1, 1, 10, 4, ip));
             std::string message = answer.format();
+            sendto(udp_fd, message.c_str(), message.size(), 0, (sockaddr *)&clientAddress, clientAddrLen);
         }
         else
         {
