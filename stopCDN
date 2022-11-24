@@ -1,0 +1,28 @@
+#!/bin/bash
+
+while getopts 'p:o:n:u:i:' OPTION; do
+    case "$OPTION" in
+        p)
+            port=${OPTARG}
+            ;;
+        o)
+            origin=${OPTARG}
+            ;;
+        i)
+            keyfile=${OPTARG}
+            ;;
+        n)
+            servername=${OPTARG}
+            ;;
+        u)
+            username=${OPTARG}
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+
+#Stop DNS server
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+pkill dnsserver -u
+EOF
