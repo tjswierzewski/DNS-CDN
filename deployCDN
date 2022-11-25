@@ -22,13 +22,12 @@ done
 shift $((OPTIND-1))
 
 make clean
-rsync -a --exclude=".*" -e  "ssh -i $keyfile" . tjswierzewski@cs5700cdnproject.khoury.northeastern.edu:~/5700/project4
+rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./DNS $username@97.107.140.73:~
 
-ssh -i $keyfile tjswierzewski@cs5700cdnproject.khoury.northeastern.edu <<EOF
-cd 5700/project4
-make clean
-make
-scp -i $keyfile ./dnsserver $username@97.107.140.73:~
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+cd DNS
+make -f DNS.mk clean
+make -f DNS.mk
 EOF
 
         
