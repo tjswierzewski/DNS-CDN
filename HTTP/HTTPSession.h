@@ -1,30 +1,28 @@
-#ifndef HTTPSSESSION_H
-#define HTTPSSESSION_H
+#ifndef HTTPSession_H
+#define HTTPSession_H
 
 #include <map>
 #include <string>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 #include "HTTPResponseMessage.h"
 #include "HTTPRequestMessage.h"
 
-class HTTPSSession
+class HTTPSession
 {
 public:
     typedef std::map<std::string, std::string> cookiesMap;
 
 private:
     cookiesMap cookies;
-    int socket;
-    const char *host, *port;
-    bool https;
-    SSL_CTX *ctx;
-    SSL *ssl;
+    int fd;
 
     /**
      * Create socket connection with Host
      */
     int connectToHost();
+    /**
+     * Accept incoming socket connection
+     */
+    int acceptConnection(int fd);
     /**
      * Send HTTP message
      */
@@ -46,11 +44,11 @@ public:
     /**
      * Create HTTPS Session object
      */
-    HTTPSSession(const char *host, const char *port);
+    HTTPSession(int fd);
     /**
-     * Delete HTTP Session object
+     * Get HTTP Session file descriptor
      */
-    ~HTTPSSession();
+    int getFD();
     /**
      * Send Get request to Host
      */
@@ -59,5 +57,9 @@ public:
      * Send Post request to Host
      */
     HTTPResponseMessage post(std::string path, std::string data, std::string type);
+    /**
+     * Read message from socket
+     */
+    int read();
 };
 #endif

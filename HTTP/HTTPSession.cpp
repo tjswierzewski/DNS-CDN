@@ -1,4 +1,4 @@
-#include "HTTPSSession.h"
+#include "HTTPSession.h"
 #include "HTTPMessage.h"
 #include "HTTPResponseMessage.h"
 #include "HTTPRequestMessage.h"
@@ -19,63 +19,44 @@
 /**
  * Create HTTP Session object
  */
-HTTPSSession::HTTPSSession(const char *host, const char *port)
+HTTPSession::HTTPSession(int fd)
 {
-    this->host = host;
-    this->port = port;
-    this->socket = connectToHost();
-    if (this->socket < 0)
+    this->fd = this->acceptConnection(fd);
+    if (this->fd < 0)
     {
-        throw std::invalid_argument("Error in port creation");
+        throw std::invalid_argument("Error in connection");
     }
 };
 /**
- * Delete HTTP Session object
+ * Get HTTP Session file descriptor
  */
-HTTPSSession::~HTTPSSession()
+int HTTPSession::getFD()
 {
-    close(this->socket);
+    return this->fd;
 }
-
 /**
- * Create socket connection with Host
+ * Accept incoming socket connection
  */
-int HTTPSSession::connectToHost()
+int HTTPSession::acceptConnection(int fd)
 {
-    struct addrinfo hints, *addr;
-    int sock, err;
+    struct sockaddr_in clientAddress;
+    int conn_sock;
+    int clientAddrLength = sizeof(clientAddress);
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;
-
-    if ((err = getaddrinfo(this->host, this->port, &hints, &addr)) != 0)
+    conn_sock = accept4(fd, (struct sockaddr *)&clientAddress, (socklen_t *)&clientAddrLength, SOCK_NONBLOCK);
+    if (conn_sock == -1)
     {
-        std::cout << "Error" << err << ": " << gai_strerror(err) << std::endl;
-        return -1;
+        perror("accept");
+        exit(EXIT_FAILURE);
     }
 
-    sock = ::socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-    if (sock < 0)
-    {
-        perror("socket");
-        return -1;
-    }
-
-    if (connect(sock, addr->ai_addr, addr->ai_addrlen) != 0)
-    {
-        perror("connect");
-        return -1;
-    }
-    return sock;
+    return conn_sock;
 }
 
 /**
  * Send Get request to Host
  */
-HTTPResponseMessage HTTPSSession::get(std::string path)
+HTTPResponseMessage HTTPSession::get(std::string path)
 {
     HTTPMessage::headerMap headers;
     HTTPRequestMessage request(1.1, HTTPMethod::Get, path, headers);
@@ -85,13 +66,13 @@ HTTPResponseMessage HTTPSSession::get(std::string path)
 /**
  * Send Post request to Host
  */
-HTTPResponseMessage HTTPSSession::send(HTTPRequestMessage request)
+HTTPResponseMessage HTTPSession::send(HTTPRequestMessage request)
 {
     int rc;
     char buffer[BUFFER_SIZE];
     std::ostringstream input;
     memset(buffer, 0, sizeof(buffer));
-    request.setHeader("HOST", this->host);
+    // request.setHeader("HOST", this->host);
     request.setHeader("USER-AGENT", "Webcrawler/TS");
     if (!this->cookies.empty())
     {
@@ -99,15 +80,15 @@ HTTPResponseMessage HTTPSSession::send(HTTPRequestMessage request)
     }
 
     std::string output = request.format();
-    rc = SSL_write(ssl, output.c_str(), output.length());
+    // rc = SSL_write(ssl, output.c_str(), output.length());
     while (rc < output.length())
     {
-        rc += SSL_write(ssl, (char *)output.c_str() + rc, output.length() - rc);
+        // rc += SSL_write(ssl, (char *)output.c_str() + rc, output.length() - rc);
     }
     rc = 0;
     while (input.str().find("\r\n\r\n") == std::string::npos)
     {
-        rc += SSL_read(ssl, buffer + rc, 1);
+        // rc += SSL_read(ssl, buffer + rc, 1);
         input << buffer[rc - 1];
     }
     HTTPResponseMessage response(buffer);
@@ -117,7 +98,7 @@ HTTPResponseMessage HTTPSSession::send(HTTPRequestMessage request)
         rc = 0;
         while (rc < std::stoi(response.getHeaders().find("Content-Length")->second))
         {
-            rc += SSL_read(ssl, content + rc, std::stoi(response.getHeaders().find("Content-Length")->second) - rc);
+            // rc += SSL_read(ssl, content + rc, std::stoi(response.getHeaders().find("Content-Length")->second) - rc);
         }
     }
     std::string data(content);
@@ -135,7 +116,7 @@ HTTPResponseMessage HTTPSSession::send(HTTPRequestMessage request)
 /**
  * Update session state
  */
-void HTTPSSession::updateSession(HTTPResponseMessage response)
+void HTTPSession::updateSession(HTTPResponseMessage response)
 {
     for (auto &[key, value] : response.getHeaders())
     {
@@ -149,7 +130,7 @@ void HTTPSSession::updateSession(HTTPResponseMessage response)
 /**
  * Set value of cookie
  */
-void HTTPSSession::setCookie(std::string cookie)
+void HTTPSession::setCookie(std::string cookie)
 {
     std::string key, value;
     int stringPointer;
@@ -164,7 +145,7 @@ void HTTPSSession::setCookie(std::string cookie)
 /**
  * Format cookies in string to be sent in headers
  */
-std::string HTTPSSession::sendCookies()
+std::string HTTPSession::sendCookies()
 {
     std::ostringstream buffer;
     for (auto &[key, value] : this->cookies)
@@ -179,11 +160,18 @@ std::string HTTPSSession::sendCookies()
 /**
  * Send Post request to Host
  */
-HTTPResponseMessage HTTPSSession::post(std::string path, std::string data, std::string type)
+HTTPResponseMessage HTTPSession::post(std::string path, std::string data, std::string type)
 {
     HTTPMessage::headerMap headers;
     headers.insert(std::make_pair("Content-Length", std::to_string(data.length())));
     headers.insert(std::make_pair("Content-Type", type));
     HTTPRequestMessage request(1.1, HTTPMethod::Post, path, headers, data);
     return this->send(request);
+}
+/**
+ * Read message from socket
+ */
+int HTTPSession::read()
+{
+    return 0;
 }
