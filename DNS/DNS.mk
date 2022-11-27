@@ -1,6 +1,6 @@
 CC = g++
 DFLAGS = -gdwarf-2 -g3 -O0 -D_GLIBCXX_DEBUG
-CFLAGS = -std=c++11
+CFLAGS = -std=c++17
 
 dnsserver: dnsserver.o DNSMessage.o DNSQuestion.o DNSResponse.o
 	${CC} $^ ${DFLAGS} ${CFLAGS} -o $@
