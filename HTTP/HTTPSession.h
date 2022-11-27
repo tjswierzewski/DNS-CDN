@@ -26,10 +26,6 @@ private:
      */
     int connectToHost();
     /**
-     * Initialize SSL certificate
-     */
-    SSL_CTX *InitCTX(void);
-    /**
      * Send HTTP message
      */
     HTTPResponseMessage send(HTTPRequestMessage);

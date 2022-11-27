@@ -17,17 +17,7 @@
 #define BUFFER_SIZE 100000
 
 /**
- * callback to record TLS key
- */
-void ctx_callback(const SSL *ssl, const char *line)
-{
-    std::ofstream file;
-    file.open("log.key");
-    file << line;
-    file.close();
-}
-/**
- * Create HTTPS Session object
+ * Create HTTP Session object
  */
 HTTPSSession::HTTPSSession(const char *host, const char *port)
 {
@@ -38,24 +28,12 @@ HTTPSSession::HTTPSSession(const char *host, const char *port)
     {
         throw std::invalid_argument("Error in port creation");
     }
-    SSL_library_init();
-    this->ctx = InitCTX();
-    SSL_CTX_set_keylog_callback(ctx, ctx_callback);
-    this->ssl = SSL_new(ctx);
-    SSL_set_fd(this->ssl, this->socket);
-    if (SSL_connect(ssl) == -1)
-    {
-        ERR_print_errors_fp(stderr);
-        throw std::invalid_argument("Error in SSL Connection");
-    }
 };
 /**
  * Delete HTTP Session object
  */
 HTTPSSession::~HTTPSSession()
 {
-    SSL_free(this->ssl);
-    SSL_CTX_free(this->ctx);
     close(this->socket);
 }
 
@@ -92,22 +70,6 @@ int HTTPSSession::connectToHost()
         return -1;
     }
     return sock;
-}
-
-/**
- * Initialize SSL certificate
- */
-SSL_CTX *HTTPSSession::InitCTX(void)
-{
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
-    const SSL_METHOD *method = TLS_client_method();
-    SSL_CTX *ctx = SSL_CTX_new(method);
-    if (ctx == NULL)
-    {
-        ERR_print_errors_fp(stderr);
-    }
-    return ctx;
 }
 
 /**
