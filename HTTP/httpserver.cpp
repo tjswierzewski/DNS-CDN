@@ -84,11 +84,15 @@ int main(int argc, char const *argv[])
             {
                 HTTPSession session = openSessions.at(events[i].data.fd);
                 HTTPRequestMessage *request = (HTTPRequestMessage *)session.read(HTTP_REQUEST);
-                if (request->getPath().compare("/grading/beacon") == 0)
+                if (request)
                 {
-                    HTTPMessage::headerMap headers;
-                    HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
-                    session.write(&response);
+
+                    if (request->getPath().compare("/grading/beacon") == 0)
+                    {
+                        HTTPMessage::headerMap headers;
+                        HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
+                        session.write(&response);
+                    }
                 }
             }
         }

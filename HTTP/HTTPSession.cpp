@@ -151,6 +151,11 @@ HTTPMessage *HTTPSession::read(int type)
     while (input.str().find("\r\n\r\n") == std::string::npos)
     {
         rc += ::read(this->fd, buffer + rc, 1);
+        if (rc == 0 && errno == 0)
+        {
+            close(this->fd);
+            return NULL;
+        }
         input << buffer[rc - 1];
     }
     if (type == HTTP_REQUEST)
