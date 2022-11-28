@@ -16,6 +16,10 @@ public:
      */
     HTTPRequestMessage(float version, std::string method, std::string path, HTTPMessage::headerMap headers, std::string data = "");
     /**
+     * Create HTTP request from buffer
+     */
+    HTTPRequestMessage(std::string buffer);
+    /**
      * Get request HTTP method
      */
     std::string getMethod();
@@ -30,7 +34,7 @@ public:
     /**
      * Return string of request formatted to be sent via socket
      */
-    std::string format();
+    std::string format() override;
 };
 
 #endif

@@ -15,7 +15,14 @@ HTTPResponseMessage::HTTPResponseMessage(std::string buffer) : HTTPMessage(buffe
     delim = buffer.find_first_of("\r\n");
     this->statusMessage = buffer.substr(0, delim);
 }
-
+/**
+ * Create Response message from arguments
+ */
+HTTPResponseMessage::HTTPResponseMessage(float version, int status, std::string statusMessage, HTTPMessage::headerMap headers, std::string data) : HTTPMessage(version, headers, data)
+{
+    this->status = status;
+    this->statusMessage = statusMessage;
+}
 /**
  * Get response status
  */
@@ -23,11 +30,26 @@ int HTTPResponseMessage::getStatus()
 {
     return this->status;
 }
-
 /**
  *  Get response status message
  */
 std::string HTTPResponseMessage::getStatusMessage()
 {
     return this->statusMessage;
+}
+/**
+ * Return string of request formatted to be sent via socket
+ */
+std::string HTTPResponseMessage::format()
+{
+    std::string output;
+    output += "HTTP/";
+    output += this->printVersion();
+    output += " ";
+    output += std::to_string(this->getStatus());
+    output += " ";
+    output += this->getStatusMessage();
+    output += "\r\n";
+    output += HTTPMessage::format();
+    return output;
 }
