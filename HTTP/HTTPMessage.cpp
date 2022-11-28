@@ -17,12 +17,18 @@ HTTPMessage::HTTPMessage(std::string buffer)
 /**
  * Create HTTP message out of components
  */
-HTTPMessage::HTTPMessage(headerMap headers, std::string data)
+HTTPMessage::HTTPMessage(float version, headerMap headers, std::string data)
 {
+    this->version = version;
     this->headers = headers;
     this->data = data;
 }
-
+/**
+ * Deconstructor
+ */
+HTTPMessage::~HTTPMessage()
+{
+}
 /**
  * Get HTTP version
  */
@@ -90,4 +96,23 @@ std::string HTTPMessage::printVersion()
 void HTTPMessage::setData(std::string data)
 {
     this->data = data;
+}
+/**
+ * Return string of request formatted to be sent via socket
+ */
+std::string HTTPMessage::format()
+{
+    std::string output;
+    for (auto &[key, value] : this->headers)
+    {
+        output += key;
+        output += ": ";
+        output += value;
+        output += "\r\n";
+    }
+    output += "\r\n";
+
+    output += data;
+    output += "\0";
+    return output;
 }

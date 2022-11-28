@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "HTTPSession.h"
+#include "HTTPRequestMessage.h"
+#include "HTTPResponseMessage.h"
 #include <fcntl.h>
 #define MAX_EVENTS 10
 #define MAX_LOG 10
@@ -81,7 +83,13 @@ int main(int argc, char const *argv[])
             else
             {
                 HTTPSession session = openSessions.at(events[i].data.fd);
-                session.read();
+                HTTPRequestMessage *request = (HTTPRequestMessage *)session.read(HTTP_REQUEST);
+                if (request->getPath().compare("/grading/beacon") == 0)
+                {
+                    HTTPMessage::headerMap headers;
+                    HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
+                    session.write(&response);
+                }
             }
         }
     }

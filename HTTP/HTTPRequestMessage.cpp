@@ -3,13 +3,27 @@
 /**
  * Create HTTP request with strings as arguments
  */
-HTTPRequestMessage::HTTPRequestMessage(float version, std::string method, std::string path, HTTPMessage::headerMap headers, std::string data) : HTTPMessage(headers, data)
+HTTPRequestMessage::HTTPRequestMessage(float version, std::string method, std::string path, HTTPMessage::headerMap headers, std::string data) : HTTPMessage(version, headers, data)
 {
     this->version = version;
     this->method = method;
     this->path = path;
 }
-
+/**
+ * Create HTTP request from buffer
+ */
+HTTPRequestMessage::HTTPRequestMessage(std::string buffer) : HTTPMessage(buffer)
+{
+    int delim;
+    delim = buffer.find_first_of(" ");
+    this->method = buffer.substr(0, delim);
+    buffer.erase(0, delim + 1);
+    delim = buffer.find_first_of(" ");
+    this->path = buffer.substr(0, delim);
+    buffer.erase(0, delim + 1);
+    delim = buffer.find_first_of("\r\n");
+    this->version = stof(buffer.substr(5, delim - 5));
+}
 /**
  * Get request HTTP method
  */
@@ -41,19 +55,8 @@ std::string HTTPRequestMessage::format()
     output += " ";
     output += this->path;
     output += " HTTP/";
-    output += printVersion();
+    output += this->printVersion();
     output += "\r\n";
-    for (auto &[key, value] : this->headers)
-    {
-        output += key;
-        output += ": ";
-        output += value;
-        output += "\r\n";
-    }
-    output += "\r\n";
-
-    output += data;
-    output += "\0";
-
+    output += HTTPMessage::format();
     return output;
 }

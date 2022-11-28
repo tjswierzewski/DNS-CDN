@@ -6,6 +6,9 @@
 #include "HTTPResponseMessage.h"
 #include "HTTPRequestMessage.h"
 
+#define HTTP_REQUEST 0
+#define HTTP_RESPONSE 1
+
 class HTTPSession
 {
 public:
@@ -23,14 +26,11 @@ private:
      * Accept incoming socket connection
      */
     int acceptConnection(int fd);
-    /**
-     * Send HTTP message
-     */
-    HTTPResponseMessage send(HTTPRequestMessage);
+
     /**
      * Update session state
      */
-    void updateSession(HTTPResponseMessage response);
+    void updateSession(HTTPMessage *message);
     /**
      * Set value of cookie
      */
@@ -52,14 +52,18 @@ public:
     /**
      * Send Get request to Host
      */
-    HTTPResponseMessage get(std::string path);
+    HTTPResponseMessage *get(std::string path);
     /**
      * Send Post request to Host
      */
-    HTTPResponseMessage post(std::string path, std::string data, std::string type);
+    HTTPResponseMessage *post(std::string path, std::string data, std::string type);
     /**
      * Read message from socket
      */
-    int read();
+    HTTPMessage *read(int type);
+    /**
+     * Write message over socket
+     */
+    void write(HTTPMessage *message);
 };
 #endif

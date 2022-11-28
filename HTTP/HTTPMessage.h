@@ -28,7 +28,11 @@ public:
     /**
      * Create HTTP message out of components
      */
-    HTTPMessage(headerMap headers, std::string data = "");
+    HTTPMessage(float version, headerMap headers, std::string data = "");
+    /**
+     * Deconstructor
+     */
+    virtual ~HTTPMessage();
     /**
      * Get HTTP version
      */
@@ -53,5 +57,9 @@ public:
      * Set message data
      */
     void setData(std::string data);
+    /**
+     * Return string of request formatted to be sent via socket
+     */
+    virtual std::string format();
 };
 #endif
