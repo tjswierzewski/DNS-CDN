@@ -21,12 +21,12 @@ DNSMessage::DNSMessage(unsigned short int identification, int qr, int opcode, in
 }
 DNSMessage::DNSMessage(char *message, int size)
 {
-    this->identification = message[0] << 8 | message[1];
-    this->flags = message[2] << 8 | message[3];
-    this->numberOfQuestions = message[4] << 8 | message[5];
-    this->numberOfAnswerRecords = message[6] << 8 | message[7];
-    this->numberOfAuthorityRecords = message[8] << 8 | message[9];
-    this->numberOfAdditionalRecords = message[10] << 8 | message[11];
+    this->identification = ntohs(*(uint16_t *)message);
+    this->flags = (message[2] << 8) + message[3];
+    this->numberOfQuestions = (message[4] << 8) + message[5];
+    this->numberOfAnswerRecords = (message[6] << 8) + message[7];
+    this->numberOfAuthorityRecords = (message[8] << 8) + message[9];
+    this->numberOfAdditionalRecords = (message[10] << 8) + message[11];
     int offset = 12;
     for (size_t i = 0; i < this->numberOfQuestions; i++)
     {
