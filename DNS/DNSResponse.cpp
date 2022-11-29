@@ -2,7 +2,7 @@
 #include <string>
 #include "DNSResponse.h"
 
-DNSResponse::DNSResponse(std::string name, unsigned short int type, unsigned short int dnsClass, unsigned int ttl, unsigned short int, std::string data)
+DNSResponse::DNSResponse(std::string name, unsigned short int type, unsigned short int dnsClass, unsigned int ttl, unsigned short int dataLength, std::string data)
 {
     this->name = name;
     this->type = type;
