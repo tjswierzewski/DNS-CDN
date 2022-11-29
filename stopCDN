@@ -26,3 +26,7 @@ shift $((OPTIND-1))
 ssh -i $keyfile $username@97.107.140.73 <<EOF
 pkill -U $username dnsserver
 EOF
+
+ssh -i $keyfile $username@173.255.210.124 <<EOF
+pkill -U $username httpserver
+EOF
