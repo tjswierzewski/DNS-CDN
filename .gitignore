@@ -5,3 +5,4 @@ dnsserver
 *.pcapng
 khoury_rsa
 *.bin
+.DS_Store
