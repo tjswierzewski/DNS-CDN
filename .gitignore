@@ -6,3 +6,4 @@ DNS/dnsserver
 khoury_rsa
 *.bin
 HTTP/httpserver
+.DS_Store
