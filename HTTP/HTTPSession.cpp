@@ -14,7 +14,7 @@
 #include <sstream>
 #include <fstream>
 
-#define BUFFER_SIZE 1 << 16
+#define BUFFER_SIZE 1 << 20
 
 /**
  * Create HTTP Session from listen socket
@@ -123,6 +123,11 @@ void HTTPSession::write(HTTPMessage *message)
     {
         message->setHeader("Cookie", this->sendCookies());
     }
+    if (message->getDataLength() != 0)
+    {
+        message->setHeader("Content-Length", std::to_string(message->getDataLength()));
+        message->removeHeader("Transfer-Encoding");
+    }
     std::string output = message->format();
     rc = ::write(this->fd, output.c_str(), output.length());
     while (rc < output.length())
@@ -216,14 +221,40 @@ HTTPMessage *HTTPSession::read(int type)
     }
 
     char *content = buffer + rc;
+    input.flush();
+    rc = 0;
     if (message->getHeaders().count("Content-Length"))
     {
-        rc = 0;
         while (rc < std::stoi(message->getHeaders().find("Content-Length")->second))
         {
             rc += ::read(this->fd, content + rc, std::stoi(message->getHeaders().find("Content-Length")->second) - rc);
         }
     }
+    else if (message->getHeaders().count("Transfer-Encoding") &&
+             message->getHeaders().find("Transfer-Encoding")->second.compare("chunked") == 0)
+    {
+        char size[10];
+        std::ostringstream sizeString;
+        while (sizeString.str().find("\r\n") == std::string::npos)
+        {
+            rc += ::read(this->fd, size + rc, 1);
+            if (rc == 0 && errno == 0)
+            {
+                close(this->fd);
+                return NULL;
+            }
+            sizeString << size[rc - 1];
+            rc = 0;
+        }
+        std::cout << sizeString.str() << std::endl;
+        int dataSize = std::stoul(sizeString.str().substr(0, sizeString.str().size() - 2), nullptr, 16);
+        int data_rc = 0;
+        while (data_rc < dataSize)
+        {
+            data_rc += ::read(this->fd, content + data_rc, dataSize - data_rc);
+        }
+    }
+
     std::string data(content);
     message->setData(data);
     this->updateSession(message);

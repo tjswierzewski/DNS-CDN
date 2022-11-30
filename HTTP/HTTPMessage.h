@@ -61,5 +61,13 @@ public:
      * Return string of request formatted to be sent via socket
      */
     virtual std::string format();
+    /**
+     * Get length of data section
+     */
+    int getDataLength();
+    /**
+     * Remove a header
+     */
+    void removeHeader(std::string key);
 };
 #endif

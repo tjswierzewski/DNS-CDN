@@ -116,3 +116,20 @@ std::string HTTPMessage::format()
     output += "\0";
     return output;
 }
+/**
+ * Get length of data section
+ */
+int HTTPMessage::getDataLength()
+{
+    return this->data.length();
+}
+/**
+ * Remove a header
+ */
+void HTTPMessage::removeHeader(std::string key)
+{
+    if (this->headers.count(key))
+    {
+        this->headers.erase(key);
+    }
+}
