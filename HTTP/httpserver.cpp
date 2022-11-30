@@ -86,12 +86,18 @@ int main(int argc, char const *argv[])
                 HTTPRequestMessage *request = (HTTPRequestMessage *)session.read(HTTP_REQUEST);
                 if (request)
                 {
-
                     if (request->getPath().compare("/grading/beacon") == 0)
                     {
                         HTTPMessage::headerMap headers;
                         HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
                         session.write(&response);
+                    }
+                    else
+                    {
+                        // request page from origin
+                        HTTPSession origin(argv[4], "80");
+                        HTTPResponseMessage *page = origin.get(request->getPath());
+                        // send page to client
                     }
                 }
             }

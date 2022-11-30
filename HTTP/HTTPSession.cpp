@@ -17,7 +17,7 @@
 #define BUFFER_SIZE 1 << 16
 
 /**
- * Create HTTP Session object
+ * Create HTTP Session from listen socket
  */
 HTTPSession::HTTPSession(int fd)
 {
@@ -28,11 +28,56 @@ HTTPSession::HTTPSession(int fd)
     }
 };
 /**
+ * Create HTTPS Session connected to provided host
+ */
+HTTPSession::HTTPSession(const char *host, const char *port)
+{
+    this->fd = connectToHost(host, port);
+    if (this->fd < 0)
+    {
+        throw std::invalid_argument("Error in port creation");
+    }
+};
+/**
  * Get HTTP Session file descriptor
  */
 int HTTPSession::getFD()
 {
     return this->fd;
+}
+/**
+ * Create socket connection with Host
+ */
+int HTTPSession::connectToHost(const char *host, const char *port)
+{
+    struct addrinfo hints, *addr;
+    int sock, err;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+
+    if ((err = getaddrinfo(host, port, &hints, &addr)) != 0)
+    {
+        std::cout << "Error" << err << ": " << gai_strerror(err) << std::endl;
+        return -1;
+    }
+
+    sock = ::socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+    if (sock < 0)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    if (connect(sock, addr->ai_addr, addr->ai_addrlen) != 0)
+    {
+        perror("connect");
+        return -1;
+    }
+    return sock;
 }
 /**
  * Accept incoming socket connection
