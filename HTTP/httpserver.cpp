@@ -95,9 +95,10 @@ int main(int argc, char const *argv[])
                     else
                     {
                         // request page from origin
-                        HTTPSession origin(argv[4], "80");
+                        HTTPSession origin(argv[4], "8080");
                         HTTPResponseMessage *page = origin.get(request->getPath());
                         // send page to client
+                        session.write(page);
                     }
                 }
             }
