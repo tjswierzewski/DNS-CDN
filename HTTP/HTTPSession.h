@@ -17,11 +17,12 @@ public:
 private:
     cookiesMap cookies;
     int fd;
+    const char *host, *port;
 
     /**
      * Create socket connection with Host
      */
-    int connectToHost(const char *host, const char *port);
+    int connectToHost();
     /**
      * Accept incoming socket connection
      */

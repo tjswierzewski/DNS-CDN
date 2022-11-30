@@ -32,7 +32,9 @@ HTTPSession::HTTPSession(int fd)
  */
 HTTPSession::HTTPSession(const char *host, const char *port)
 {
-    this->fd = connectToHost(host, port);
+    this->host = host;
+    this->port = port;
+    this->fd = connectToHost();
     if (this->fd < 0)
     {
         throw std::invalid_argument("Error in port creation");
@@ -48,7 +50,7 @@ int HTTPSession::getFD()
 /**
  * Create socket connection with Host
  */
-int HTTPSession::connectToHost(const char *host, const char *port)
+int HTTPSession::connectToHost()
 {
     struct addrinfo hints, *addr;
     int sock, err;
@@ -59,7 +61,7 @@ int HTTPSession::connectToHost(const char *host, const char *port)
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
 
-    if ((err = getaddrinfo(host, port, &hints, &addr)) != 0)
+    if ((err = getaddrinfo(this->host, this->port, &hints, &addr)) != 0)
     {
         std::cout << "Error" << err << ": " << gai_strerror(err) << std::endl;
         return -1;
@@ -105,6 +107,8 @@ HTTPResponseMessage *HTTPSession::get(std::string path)
 {
     HTTPMessage::headerMap headers;
     HTTPRequestMessage request(1.1, HTTPMethod::Get, path, headers);
+    request.setHeader("HOST", this->host);
+    request.setHeader("USER-AGENT", "Webcrawler/TS");
     this->write(&request);
     return (HTTPResponseMessage *)this->read(HTTP_RESPONSE);
 }
@@ -119,7 +123,6 @@ void HTTPSession::write(HTTPMessage *message)
     {
         message->setHeader("Cookie", this->sendCookies());
     }
-
     std::string output = message->format();
     rc = ::write(this->fd, output.c_str(), output.length());
     while (rc < output.length())
