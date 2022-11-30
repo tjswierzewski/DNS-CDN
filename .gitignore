@@ -1,7 +1,8 @@
 .devcontainer
 .vscode
-dnsserver
+DNS/dnsserver
 *.o
 *.pcapng
 khoury_rsa
 *.bin
+HTTP/httpserver
