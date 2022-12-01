@@ -1,9 +1,11 @@
 #include <iostream>
+#include <iomanip>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
 #include "DNSMessage.h"
+#include "GeoCoordToDistance.h"
 
 int main(int argc, char const *argv[])
 {
@@ -39,6 +41,8 @@ int main(int argc, char const *argv[])
         perror("UDP Bind failed");
         exit(EXIT_FAILURE);
     }
+
+    // GEO LOCATION
 
     while (1)
     {
