@@ -90,9 +90,20 @@ int main(int argc, char const *argv[])
             DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
 
-            // auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
-            std::string ip = "\x8B\x90\x1E\x19";
-            DNSResponse answer(question->getName(), 1, 1, 10, 4, ip);
+            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
+
+            const CDNServer *optimalServer;
+            long double optimalDistance = 100000;
+            for (auto &&server : serverList)
+            {
+                long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
+                if (serverDistance < optimalDistance)
+                {
+                    optimalServer = &server;
+                    optimalDistance = serverDistance;
+                }
+            }
+            DNSResponse answer(question->getName(), 1, 1, 10, 4, optimalServer->networkIP());
             response.addAnswer(answer);
             std::string message = response.format();
             sendto(udp_fd, message.c_str(), message.size(), 0, (sockaddr *)&clientAddress, clientAddrLen);

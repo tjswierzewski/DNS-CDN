@@ -29,3 +29,17 @@ void CDNServer::setLongitude(long double longitude)
 {
     this->longitude = longitude;
 }
+std::string CDNServer::networkIP() const
+{
+    int temp = ntohl(this->ip);
+    std::string out((char *)&temp, 4);
+    return out;
+}
+long double CDNServer::getLatitude() const
+{
+    return this->latitude;
+}
+long double CDNServer::getLongitude() const
+{
+    return this->longitude;
+}
