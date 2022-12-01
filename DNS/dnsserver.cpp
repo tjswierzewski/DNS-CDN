@@ -45,9 +45,8 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-// GEO LOCATION
-// Get servers
-std:
+    // GEO LOCATION
+    // Get servers
     std::map<int, CDNServer> serverList;
     std::string line;
     std::ifstream serversFile("servers.txt");
