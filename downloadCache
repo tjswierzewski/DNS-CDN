@@ -1,0 +1,11 @@
+#!/bin/bash
+
+downloaded_size=0
+origin="http://cs5700cdnorigin.ccs.neu.edu:8080/"
+cd cache
+while IFS="," read -r rank count name
+do
+    name=echo "$origin$name" | xargs
+    wget 
+    break
+done < ../pageviews.csv
