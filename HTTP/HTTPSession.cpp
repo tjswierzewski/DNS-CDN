@@ -14,10 +14,10 @@
 #include <sstream>
 #include <fstream>
 
-#define BUFFER_SIZE 1 << 16
+#define BUFFER_SIZE 1 << 20
 
 /**
- * Create HTTP Session object
+ * Create HTTP Session from listen socket
  */
 HTTPSession::HTTPSession(int fd)
 {
@@ -28,11 +28,58 @@ HTTPSession::HTTPSession(int fd)
     }
 };
 /**
+ * Create HTTPS Session connected to provided host
+ */
+HTTPSession::HTTPSession(const char *host, const char *port)
+{
+    this->host = host;
+    this->port = port;
+    this->fd = connectToHost();
+    if (this->fd < 0)
+    {
+        throw std::invalid_argument("Error in port creation");
+    }
+};
+/**
  * Get HTTP Session file descriptor
  */
 int HTTPSession::getFD()
 {
     return this->fd;
+}
+/**
+ * Create socket connection with Host
+ */
+int HTTPSession::connectToHost()
+{
+    struct addrinfo hints, *addr;
+    int sock, err;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+
+    if ((err = getaddrinfo(this->host, this->port, &hints, &addr)) != 0)
+    {
+        std::cout << "Error" << err << ": " << gai_strerror(err) << std::endl;
+        return -1;
+    }
+
+    sock = ::socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+    if (sock < 0)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    if (connect(sock, addr->ai_addr, addr->ai_addrlen) != 0)
+    {
+        perror("connect");
+        return -1;
+    }
+    return sock;
 }
 /**
  * Accept incoming socket connection
@@ -60,6 +107,8 @@ HTTPResponseMessage *HTTPSession::get(std::string path)
 {
     HTTPMessage::headerMap headers;
     HTTPRequestMessage request(1.1, HTTPMethod::Get, path, headers);
+    request.setHeader("HOST", this->host);
+    request.setHeader("USER-AGENT", "Webcrawler/TS");
     this->write(&request);
     return (HTTPResponseMessage *)this->read(HTTP_RESPONSE);
 }
@@ -74,7 +123,11 @@ void HTTPSession::write(HTTPMessage *message)
     {
         message->setHeader("Cookie", this->sendCookies());
     }
-
+    if (message->getDataLength() != 0)
+    {
+        message->setHeader("Content-Length", std::to_string(message->getDataLength()));
+        message->removeHeader("Transfer-Encoding");
+    }
     std::string output = message->format();
     rc = ::write(this->fd, output.c_str(), output.length());
     while (rc < output.length())
@@ -168,14 +221,40 @@ HTTPMessage *HTTPSession::read(int type)
     }
 
     char *content = buffer + rc;
+    input.flush();
+    rc = 0;
     if (message->getHeaders().count("Content-Length"))
     {
-        rc = 0;
         while (rc < std::stoi(message->getHeaders().find("Content-Length")->second))
         {
             rc += ::read(this->fd, content + rc, std::stoi(message->getHeaders().find("Content-Length")->second) - rc);
         }
     }
+    else if (message->getHeaders().count("Transfer-Encoding") &&
+             message->getHeaders().find("Transfer-Encoding")->second.compare("chunked") == 0)
+    {
+        char size[10];
+        std::ostringstream sizeString;
+        while (sizeString.str().find("\r\n") == std::string::npos)
+        {
+            rc += ::read(this->fd, size + rc, 1);
+            if (rc == 0 && errno == 0)
+            {
+                close(this->fd);
+                return NULL;
+            }
+            sizeString << size[rc - 1];
+            rc = 0;
+        }
+        std::cout << sizeString.str() << std::endl;
+        int dataSize = std::stoul(sizeString.str().substr(0, sizeString.str().size() - 2), nullptr, 16);
+        int data_rc = 0;
+        while (data_rc < dataSize)
+        {
+            data_rc += ::read(this->fd, content + data_rc, dataSize - data_rc);
+        }
+    }
+
     std::string data(content);
     message->setData(data);
     this->updateSession(message);

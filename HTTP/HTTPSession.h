@@ -17,6 +17,7 @@ public:
 private:
     cookiesMap cookies;
     int fd;
+    const char *host, *port;
 
     /**
      * Create socket connection with Host
@@ -42,9 +43,13 @@ private:
 
 public:
     /**
-     * Create HTTPS Session object
+     * Create HTTP Session from listen socket
      */
     HTTPSession(int fd);
+    /**
+     * Create HTTPS Session connected to provided host
+     */
+    HTTPSession(const char *host, const char *port);
     /**
      * Get HTTP Session file descriptor
      */
