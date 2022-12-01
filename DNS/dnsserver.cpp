@@ -1,11 +1,14 @@
 #include <iostream>
+#include <fstream>
 #include <iomanip>
+#include <map>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
 #include "DNSMessage.h"
 #include "GeoCoordToDistance.h"
+#include "CDNServer.h"
 
 int main(int argc, char const *argv[])
 {
@@ -42,7 +45,20 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // GEO LOCATION
+// GEO LOCATION
+// Get servers
+std:
+    std::map<int, CDNServer> serverList;
+    std::string line;
+    std::ifstream serversFile("servers.txt");
+    if (serversFile.is_open())
+    {
+        while (getline(serversFile, line))
+        {
+            CDNServer server(line);
+            serverList.insert(std::make_pair(server.getIP(), server));
+        }
+    }
 
     while (1)
     {
