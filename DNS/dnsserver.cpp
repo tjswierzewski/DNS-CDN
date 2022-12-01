@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <iomanip>
 #include <set>
 #include <sys/socket.h>
@@ -9,7 +10,12 @@
 #include "DNSMessage.h"
 #include "GeoCoordToDistance.h"
 #include "CDNServer.h"
+#include "IPLocation.h"
 
+bool checkIP(IPLocation it, int ip)
+{
+    return (it.getStartIP() < ip) && (it.getEndIP() > ip);
+}
 int main(int argc, char const *argv[])
 {
     if (argc != 5)
@@ -19,15 +25,30 @@ int main(int argc, char const *argv[])
     }
 
     // GEO LOCATION
+    // Load Geo Location
+    std::set<IPLocation> IPLocations;
+    std::string line;
+    std::ifstream locationFile("../IP2LOCATION/IP2LOCATION-LITE-DB5.CSV");
+    if (locationFile.is_open())
+    {
+        while (getline(locationFile, line))
+        {
+            IPLocations.emplace(IPLocation(line));
+        }
+    }
+    locationFile.close();
     // Get servers
     std::set<CDNServer> serverList;
-    std::string line;
     std::ifstream serversFile("servers.txt");
     if (serversFile.is_open())
     {
         while (getline(serversFile, line))
         {
-            serverList.emplace(CDNServer(line));
+            CDNServer server(line);
+            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), server.getIP()));
+            server.setLatitude(location->getLatitude());
+            server.setLongitude(location->getLongitude());
+            serverList.insert(server);
         }
     }
     serversFile.close();
@@ -37,7 +58,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in clientAddress;
     int opt = 1;
     int addrlen = sizeof(address);
-    int clientAddrLen;
+    int clientAddrLen = sizeof(address);
     char buffer[1024];
 
     if ((udp_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -57,7 +78,7 @@ int main(int argc, char const *argv[])
         perror("UDP Bind failed");
         exit(EXIT_FAILURE);
     }
-
+    std::cout << "ready" << std::endl;
     while (1)
     {
         int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
@@ -68,6 +89,8 @@ int main(int argc, char const *argv[])
             std::cout << "I know that one" << std::endl;
             DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
+
+            // auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
             std::string ip = "\x8B\x90\x1E\x19";
             DNSResponse answer(question->getName(), 1, 1, 10, 4, ip);
             response.addAnswer(answer);

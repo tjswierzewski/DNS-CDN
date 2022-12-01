@@ -21,3 +21,11 @@ bool operator>(const CDNServer &s1, const CDNServer &s2)
 {
     return s1.getIP() > s2.getIP();
 }
+void CDNServer::setLatitude(long double latitude)
+{
+    this->latitude = latitude;
+}
+void CDNServer::setLongitude(long double longitude)
+{
+    this->longitude = longitude;
+}
