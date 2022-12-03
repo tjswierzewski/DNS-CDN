@@ -1,0 +1,5 @@
+#!/bin/bash
+
+ip=`dig @97.107.140.73 +short -p 25009 cs5700cdn.example.com`
+
+wget $ip:25009/$1

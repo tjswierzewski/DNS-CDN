@@ -56,27 +56,27 @@ int DNSMessage::getQR()
 }
 int DNSMessage::getOPCODE()
 {
-    return this->flags >> 11 && 0x1111;
+    return this->flags >> 11 & 0x1111;
 }
 int DNSMessage::getAA()
 {
-    return this->flags >> 10 && 0x1;
+    return this->flags >> 10 & 0x1;
 }
 int DNSMessage::getTC()
 {
-    return this->flags >> 9 && 0x1;
+    return this->flags >> 9 & 0x1;
 }
 int DNSMessage::getRD()
 {
-    return this->flags >> 8 && 0x1;
+    return this->flags >> 8 & 0x1;
 }
 int DNSMessage::getRA()
 {
-    return this->flags >> 7 && 0x1;
+    return this->flags >> 7 & 0x1;
 }
 int DNSMessage::getRCODE()
 {
-    return this->flags && 0x1111;
+    return this->flags & 0x1111;
 }
 int DNSMessage::getNumberOfQuestions()
 {

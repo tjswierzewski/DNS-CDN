@@ -7,3 +7,4 @@ khoury_rsa
 *.bin
 HTTP/httpserver
 .DS_Store
+*.csv
