@@ -16,7 +16,7 @@ private:
     static std::vector<std::string> splitRow(std::string str, std::string delimiter);
 
 public:
-    IPLocation(long startIP, long endIP, std::string countryAbbreviation, std::string country, std::string region, std::string city, long double latitude, long double longitude);
+    IPLocation(long startIP, long endIP, long double latitude, long double longitude);
     IPLocation(std::string line);
     int getStartIP() const;
     int getEndIP() const;

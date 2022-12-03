@@ -16,14 +16,10 @@ std::vector<std::string> IPLocation::splitRow(std::string str, std::string delim
     } while (delPos != std::string::npos);
     return parsed;
 }
-IPLocation::IPLocation(long startIP, long endIP, std::string countryAbbreviation, std::string country, std::string region, std::string city, long double latitude, long double longitude)
+IPLocation::IPLocation(long startIP, long endIP, long double latitude, long double longitude)
 {
     this->startIP = startIP;
     this->endIP = endIP;
-    this->countryAbbreviation = countryAbbreviation;
-    this->country = country;
-    this->region = region;
-    this->city = city;
     this->latitude = latitude;
     this->longitude = longitude;
 }
@@ -32,12 +28,8 @@ IPLocation::IPLocation(std::string line)
     std::vector<std::string> attributes = IPLocation::splitRow(line, "\",\"");
     this->startIP = std::stol(attributes[0]);
     this->endIP = std::stol(attributes[1]);
-    this->countryAbbreviation = attributes[2];
-    this->country = attributes[3];
-    this->region = attributes[4];
-    this->city = attributes[5];
-    this->latitude = std::stold(attributes[6]);
-    this->longitude = std::stold(attributes[7]);
+    this->latitude = std::stold(attributes[2]);
+    this->longitude = std::stold(attributes[3]);
 }
 bool operator<(const IPLocation &l1, const IPLocation &l2)
 {

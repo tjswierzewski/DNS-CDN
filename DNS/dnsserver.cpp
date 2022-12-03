@@ -28,7 +28,7 @@ int main(int argc, char const *argv[])
     // Load Geo Location
     std::set<IPLocation> IPLocations;
     std::string line;
-    std::ifstream locationFile("../IP2LOCATION/IP2LOCATION-LITE-DB5.CSV");
+    std::ifstream locationFile("../IP2LOCATION/IPLocation.csv");
     if (locationFile.is_open())
     {
         while (getline(locationFile, line))
