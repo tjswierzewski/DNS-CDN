@@ -1,11 +1,16 @@
 #!/bin/bash
 
 downloaded_size=0
+MAX_SIZE=17998473
 origin="http://cs5700cdnorigin.ccs.neu.edu:8080/"
 cd cache
 while IFS="," read -r rank count name
 do
-    name=echo "$origin$name" | xargs
-    wget 
-    break
-done < ../pageviews.csv
+    request=`echo "${origin}${name}" | tr -d '\r'`
+    download_size=`wget -o - $request | grep -Po 'saved \[\K[^\]/]*'`
+    downloaded_size=`expr $downloaded_size + $download_size`
+    if [ $downloaded_size -gt $MAX_SIZE ]
+    then
+        break
+    fi
+done < <(tail -n +2 ../pageviews.csv)
