@@ -21,24 +21,23 @@ while getopts 'p:o:n:u:i:' OPTION; do
 done
 shift $((OPTIND-1))
 
-make clean
-
 # DNS
-rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./DNS $username@97.107.140.73:~
-
 ssh -i $keyfile $username@97.107.140.73 <<EOF
-cd DNS
-make -f DNS.mk clean
-make -f DNS.mk
+mkdir DNS
+mkdir IP2LOCATION
 exit
 EOF
 
-#HTTP
-rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./HTTP $username@173.255.210.124:~
+scp -i $keyfile ./DNS/dnsserver $username@97.107.140.73:~/DNS
+scp -i $keyfile ./DNS/servers.txt $username@97.107.140.73:~/DNS
+scp -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATION
 
-ssh -i $keyfile $username@173.255.210.124 <<EOF
-cd HTTP
-make -f HTTP.mk clean
-make -f HTTP.mk
-exit
+# #HTTP
+while read server; do
+    ssh -i $keyfile $username@$server <<EOF
+    mkdir HTTP
+    exit
 EOF
+
+    scp -i $keyfile ./HTTP/httpserver $username@$server:HTTP
+done < ./DNS/servers.txt
