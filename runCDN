@@ -23,9 +23,13 @@ shift $((OPTIND-1))
 
 #start DNS server
 ssh -i $keyfile $username@97.107.140.73 <<EOF
-nohup ./DNS/dnsserver -p $port -n $servername > foo.out 2> foo.err < /dev/null &
+cd DNS
+nohup ./dnsserver -p $port -n $servername > foo.out 2> foo.err < /dev/null &
 EOF
 
-ssh -i $keyfile $username@173.255.210.124 <<EOF
-nohup ./HTTP/httpserver -p $port -o $origin > foo.out 2> foo.err < /dev/null &
+while read server; do
+    ssh -i $keyfile $username@$server <<EOF
+    cd HTTP
+    nohup ./httpserver -p $port -o $origin > foo.out 2> foo.err < /dev/null &
 EOF
+done < ./DNS/servers.txt

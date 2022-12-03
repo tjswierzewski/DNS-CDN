@@ -25,8 +25,12 @@ shift $((OPTIND-1))
 #Stop DNS server
 ssh -i $keyfile $username@97.107.140.73 <<EOF
 pkill -U $username dnsserver
+rm -r *
 EOF
 
-ssh -i $keyfile $username@173.255.210.124 <<EOF
-pkill -U $username httpserver
+while read server; do
+    ssh -i $keyfile $username@$server <<EOF
+    pkill -U $username httpserver
+    rm -r *
 EOF
+done < ./DNS/servers.txt
