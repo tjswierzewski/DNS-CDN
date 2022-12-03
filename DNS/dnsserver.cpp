@@ -78,7 +78,6 @@ int main(int argc, char const *argv[])
         perror("UDP Bind failed");
         exit(EXIT_FAILURE);
     }
-    std::cout << "ready" << std::endl;
     while (1)
     {
         int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
