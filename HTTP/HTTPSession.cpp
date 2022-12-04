@@ -132,7 +132,20 @@ void HTTPSession::write(HTTPMessage *message)
     rc = ::write(this->fd, output.c_str(), output.length());
     while (rc < output.length())
     {
-        rc += ::write(this->fd, (char *)output.c_str() + rc, output.length() - rc);
+        int temp = ::write(this->fd, (char *)output.c_str() + rc, output.length() - rc);
+        if (temp < 0)
+        {
+            if (errno == 11)
+            {
+                continue;
+            }
+        }
+        else
+        {
+            rc += temp;
+        }
+        std::cout << "rc: " << rc << std::endl;
+        std::cout << "errno: " << errno << std::endl;
     }
 }
 
@@ -204,10 +217,21 @@ HTTPMessage *HTTPSession::read(int type)
     while (input.str().find("\r\n\r\n") == std::string::npos)
     {
         rc += ::read(this->fd, buffer + rc, 1);
-        if (rc == 0 && errno == 0)
+        if (rc == 0)
         {
-            close(this->fd);
-            return NULL;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                return NULL;
+            }
+            else if (errno == 2 | errno == 0)
+            {
+                close(this->fd);
+                return NULL;
+            }
+            else
+            {
+                return NULL;
+            }
         }
         input << buffer[rc - 1];
     }

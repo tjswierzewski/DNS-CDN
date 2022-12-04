@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <sys/epoll.h>
 #include <map>
 #include <sys/socket.h>
@@ -7,8 +9,32 @@
 #include "HTTPRequestMessage.h"
 #include "HTTPResponseMessage.h"
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #define MAX_EVENTS 10
 #define MAX_LOG 10
+
+int checkCache(std::string path)
+{
+    DIR *dp;
+    struct dirent *entry;
+    struct stat statbuf;
+    if ((dp = opendir("../cache")) == NULL)
+    {
+        perror("opendir");
+        return -1;
+    }
+
+    while ((entry = readdir(dp)) != NULL)
+    {
+        lstat(entry->d_name, &statbuf);
+        if (path.compare(entry->d_name) == 0)
+        {
+            return 0;
+        }
+    }
+    return -1;
+}
 
 int main(int argc, char const *argv[])
 {
@@ -67,38 +93,62 @@ int main(int argc, char const *argv[])
         }
         for (size_t i = 0; i < nfds; i++)
         {
-            if (events[i].data.fd == listen_sock)
+            if (events[i].events == EPOLLIN)
             {
-                HTTPSession session(listen_sock);
-                int conn_sock = session.getFD();
-                openSessions.insert({conn_sock, session});
-                ev.events = EPOLLIN | EPOLLET;
-                ev.data.fd = conn_sock;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+                if (events[i].data.fd == listen_sock)
                 {
-                    perror("epoll_ctl: conn_sock");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else
-            {
-                HTTPSession session = openSessions.at(events[i].data.fd);
-                HTTPRequestMessage *request = (HTTPRequestMessage *)session.read(HTTP_REQUEST);
-                if (request)
-                {
-                    if (request->getPath().compare("/grading/beacon") == 0)
+                    HTTPSession session(listen_sock);
+                    int conn_sock = session.getFD();
+                    openSessions.insert({conn_sock, session});
+                    ev.events = EPOLLIN | EPOLLET;
+                    ev.data.fd = conn_sock;
+                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
                     {
-                        HTTPMessage::headerMap headers;
-                        HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
-                        session.write(&response);
+                        perror("epoll_ctl: conn_sock");
+                        exit(EXIT_FAILURE);
                     }
-                    else
+                }
+                else
+                {
+                    HTTPSession session = openSessions.at(events[i].data.fd);
+                    HTTPRequestMessage *request = (HTTPRequestMessage *)session.read(HTTP_REQUEST);
+                    if (request)
                     {
-                        // request page from origin
-                        HTTPSession origin(argv[4], "8080");
-                        HTTPResponseMessage *page = origin.get(request->getPath());
-                        // send page to client
-                        session.write(page);
+                        if (request->getPath().compare("/grading/beacon") == 0)
+                        {
+                            HTTPMessage::headerMap headers;
+                            HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 204, "No Content", headers);
+                            session.write(&response);
+                        }
+                        else
+                        {
+                            // request page from origin
+                            std::string path = request->getPath();
+                            path.erase(0, 1);
+                            if (path.compare("") == 0)
+                            {
+                                path = "index.html";
+                            }
+                            if (checkCache(path) > -1)
+                            {
+                                std::ifstream file(std::string("../cache/").append(path));
+                                std::stringstream buffer;
+                                HTTPMessage::headerMap headers;
+                                buffer << file.rdbuf();
+                                file.close();
+                                HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 200, "OK", headers);
+                                response.setData(buffer.str());
+                                std::cout << "THIS IS CACHED" << std::endl;
+                                session.write(&response);
+                            }
+                            else
+                            {
+                                HTTPSession origin(argv[4], "8080");
+                                HTTPResponseMessage *page = origin.get(request->getPath());
+                                // send page to client
+                                session.write(page);
+                            }
+                        }
                     }
                 }
             }
