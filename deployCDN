@@ -36,8 +36,19 @@ scp -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATI
 while read server; do
     ssh -i $keyfile $username@$server <<EOF
     mkdir HTTP
+    mkdir cache
     exit
 EOF
 
     scp -i $keyfile ./HTTP/httpserver $username@$server:HTTP
+    scp -i $keyfile ./downloadCache $username@$server:~
+    scp -i $keyfile ./pageviews.csv $username@$server:~
+
+
+    ssh -i $keyfile $username@$server <<EOF
+    ./downloadCache
+    rm downloadCache
+    rm pageviews.csv
+    exit
+EOF
 done < ./DNS/servers.txt

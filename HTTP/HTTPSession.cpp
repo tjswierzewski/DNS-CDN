@@ -132,7 +132,20 @@ void HTTPSession::write(HTTPMessage *message)
     rc = ::write(this->fd, output.c_str(), output.length());
     while (rc < output.length())
     {
-        rc += ::write(this->fd, (char *)output.c_str() + rc, output.length() - rc);
+        int temp = ::write(this->fd, (char *)output.c_str() + rc, output.length() - rc);
+        if (temp < 0)
+        {
+            if (errno == 11)
+            {
+                continue;
+            }
+        }
+        else
+        {
+            rc += temp;
+        }
+        std::cout << "rc: " << rc << std::endl;
+        std::cout << "errno: " << errno << std::endl;
     }
 }
 
