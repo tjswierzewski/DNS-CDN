@@ -3,14 +3,22 @@
 #include <algorithm>
 #include <iomanip>
 #include <set>
+#include <map>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
+#include <float.h>
 #include "DNSMessage.h"
 #include "GeoCoordToDistance.h"
 #include "CDNServer.h"
 #include "IPLocation.h"
+
+struct serverStats
+{
+    const CDNServer *server;
+    double ping;
+};
 
 bool checkIP(IPLocation it, int ip)
 {
@@ -39,6 +47,7 @@ int main(int argc, char const *argv[])
     locationFile.close();
     // Get servers
     std::set<CDNServer> serverList;
+    std::map<unsigned int, struct serverStats> matchedServer;
     std::ifstream serversFile("servers.txt");
     if (serversFile.is_open())
     {
@@ -88,19 +97,29 @@ int main(int argc, char const *argv[])
             std::cout << "I know that one" << std::endl;
             DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
-
-            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
-
+            unsigned int clientIP = htonl(clientAddress.sin_addr.s_addr);
             const CDNServer *optimalServer;
-            long double optimalDistance = 100000;
-            for (auto &&server : serverList)
+            if (auto it = matchedServer.find(clientIP); it == matchedServer.end())
             {
-                long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
-                if (serverDistance < optimalDistance)
+                auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), clientIP));
+                long double optimalDistance = 100000;
+                for (auto &&server : serverList)
                 {
-                    optimalServer = &server;
-                    optimalDistance = serverDistance;
+                    long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
+                    if (serverDistance < optimalDistance)
+                    {
+                        optimalServer = &server;
+                        optimalDistance = serverDistance;
+                    }
                 }
+                struct serverStats optimal;
+                optimal.server = optimalServer;
+                optimal.ping = DBL_MAX;
+                matchedServer.insert({clientIP, optimal});
+            }
+            else
+            {
+                optimalServer = it->second.server;
             }
             DNSResponse answer(question->getName(), 1, 1, 10, 4, optimalServer->networkIP());
             response.addAnswer(answer);
