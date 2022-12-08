@@ -97,15 +97,23 @@ int main(int argc, char const *argv[])
             {
                 if (events[i].data.fd == listen_sock)
                 {
-                    HTTPSession session(listen_sock);
-                    int conn_sock = session.getFD();
-                    openSessions.insert({conn_sock, session});
-                    ev.events = EPOLLIN | EPOLLET;
-                    ev.data.fd = conn_sock;
-                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+                    try
                     {
-                        perror("epoll_ctl: conn_sock");
-                        exit(EXIT_FAILURE);
+                        HTTPSession session(listen_sock);
+                        int conn_sock = session.getFD();
+                        openSessions.insert({conn_sock, session});
+                        ev.events = EPOLLIN | EPOLLET;
+                        ev.data.fd = conn_sock;
+                        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+                        {
+                            perror("epoll_ctl: conn_sock");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    catch (const std::exception &e)
+                    {
+                        std::cerr << e.what() << '\n';
+                        continue;
                     }
                 }
                 else
