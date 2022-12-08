@@ -1,14 +1,21 @@
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <iomanip>
 #include <set>
 #include <map>
+#include <list>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
 #include <float.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include "DNSMessage.h"
 #include "GeoCoordToDistance.h"
 #include "CDNServer.h"
@@ -32,9 +39,34 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // scamper
+    std::list<std::string> remotes;
+    DIR *dp;
+    struct dirent *entry;
+    struct stat statbuf;
+    if ((dp = opendir("../remotes")) == NULL)
+    {
+        perror("opendir");
+        exit(EXIT_FAILURE);
+    }
+
+    while ((entry = readdir(dp)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+        {
+
+            std::string path("../remotes/");
+            path.append(entry->d_name);
+            remotes.push_back(path);
+        }
+    }
+
+    auto remoteIter = remotes.begin();
+
     // GEO LOCATION
     // Load Geo Location
-    std::set<IPLocation> IPLocations;
+    std::set<IPLocation>
+        IPLocations;
     std::string line;
     std::ifstream locationFile("../IP2LOCATION/IPLocation.csv");
     if (locationFile.is_open())
@@ -89,6 +121,7 @@ int main(int argc, char const *argv[])
     }
     while (1)
     {
+        // DNS
         int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
         DNSMessage query(buffer, size);
         DNSQuestion *question;
@@ -130,6 +163,41 @@ int main(int argc, char const *argv[])
         {
             std::cout << "I don't know that one" << std::endl;
         }
+
+        // SCAMPER
+        int commandPipe[2];
+        int resultsPipe[2];
+        pipe(commandPipe);
+        pipe(resultsPipe);
+
+        if (remoteIter == remotes.end())
+        {
+            remoteIter = remotes.begin();
+        }
+
+        int pid = fork();
+        if (pid == 0)
+        {
+            dup2(commandPipe[0], STDIN_FILENO);
+            dup2(resultsPipe[1], STDOUT_FILENO);
+            ::close(commandPipe[1]);
+            ::close(resultsPipe[0]);
+            const char *exec[] = {"./scamperScript",
+                                  remoteIter->c_str(),
+                                  NULL};
+            execvp(exec[0], (char *const *)exec);
+            exit(EXIT_FAILURE);
+        }
+
+        ::close(commandPipe[0]);
+        ::close(resultsPipe[1]);
+        std::string command("ping 8.8.8.8");
+        ::write(commandPipe[1], command.c_str(), command.length());
+        ::close(commandPipe[1]);
+        waitpid(pid, NULL, 0);
+        char buffer[1000];
+        read(resultsPipe[0], buffer, 1000);
+        ::close(resultsPipe[0]);
     }
 
     return 0;

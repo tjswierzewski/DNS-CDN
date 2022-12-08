@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sc_attach -i - -o - -U $1 | sc_warts2json
