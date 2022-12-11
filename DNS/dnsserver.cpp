@@ -31,6 +31,39 @@ bool checkIP(IPLocation it, int ip)
 {
     return (it.getStartIP() < ip) && (it.getEndIP() > ip);
 }
+
+std::list<std::map<std::string, std::string>> parseScamperJson(std::string response)
+{
+    std::list<std::map<std::string, std::string>> jsonObjects;
+    int openBracket = -1;
+    int closeBracket = -1;
+    int nextOpenBracket = -1;
+    openBracket = response.find('{', closeBracket + 1);
+    nextOpenBracket = response.find('{', openBracket + 1);
+    while (openBracket != std::string::npos)
+    {
+        while (nextOpenBracket != -1 && (closeBracket = response.find('}', closeBracket + 1)) > nextOpenBracket)
+        {
+            nextOpenBracket = response.find('{', nextOpenBracket + 1);
+        }
+        std::map<std::string, std::string> jsonObject;
+        std::string jsonString = response.substr(openBracket, closeBracket - openBracket + 1);
+        openBracket = nextOpenBracket;
+        int openQuoteKey = -1;
+        int closeQuoteValue = -1;
+        int colon = -1;
+        openQuoteKey = jsonString.find('"', closeQuoteValue + 1);
+        while (openQuoteKey != -1)
+        {
+            colon = jsonString.find(':', openQuoteKey + 1);
+            closeQuoteValue = jsonString.find("\",", openQuoteKey + 1);
+            jsonObject.insert({jsonString.substr(openQuoteKey + 1, colon - openQuoteKey), jsonString.substr(colon + 2, closeQuoteValue - colon - 2)});
+        }
+
+        jsonObjects.emplace_back(jsonObject);
+    }
+    return jsonObjects;
+}
 int main(int argc, char const *argv[])
 {
     if (argc != 5)
@@ -188,15 +221,16 @@ int main(int argc, char const *argv[])
             execvp(exec[0], (char *const *)exec);
             exit(EXIT_FAILURE);
         }
-
+        int status;
         ::close(commandPipe[0]);
         ::close(resultsPipe[1]);
-        std::string command("ping 8.8.8.8");
+        std::string command("ping 8.8.8.8\n");
         ::write(commandPipe[1], command.c_str(), command.length());
         ::close(commandPipe[1]);
-        waitpid(pid, NULL, 0);
-        char buffer[1000];
-        read(resultsPipe[0], buffer, 1000);
+        waitpid(pid, &status, 0);
+        char scamperBuffer[5000];
+        int scamperRC = read(resultsPipe[0], scamperBuffer, 5000);
+        std::list<std::map<std::string, std::string>> measurements = parseScamperJson(std::string(scamperBuffer, scamperRC));
         ::close(resultsPipe[0]);
     }
 
