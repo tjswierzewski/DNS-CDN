@@ -86,7 +86,7 @@ int main(int argc, char const *argv[])
         if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
         {
             std::cout << "I know that one" << std::endl;
-            DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
+            DNSMessage response(query.getIdentification(), 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
 
             auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
