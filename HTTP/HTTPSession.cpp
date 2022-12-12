@@ -139,6 +139,11 @@ void HTTPSession::write(HTTPMessage *message)
             {
                 continue;
             }
+            else
+            {
+                close(this->fd);
+                // remove from epoll
+            }
         }
         else
         {
