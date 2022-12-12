@@ -10,3 +10,4 @@ HTTP/httpserver
 *.csv
 *.a
 cache
+DNS/connectedClients

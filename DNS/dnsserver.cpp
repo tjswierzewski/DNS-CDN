@@ -24,12 +24,25 @@
 #include "../JSON/JSON.h"
 #include "../JSON/JSONString.h"
 #include "../JSON/JSONJson.h"
+#include "../JSON/JSONfloat.h"
 
 struct serverStats
 {
     const CDNServer *server;
-    double ping;
+    float ping;
     int ttl;
+};
+
+struct find_by_ip
+{
+    find_by_ip(unsigned int ip) : ip(ip) {}
+    bool operator()(CDNServer server)
+    {
+        return server.getIP() == ip;
+    }
+
+private:
+    unsigned int ip;
 };
 
 bool checkIP(IPLocation it, int ip)
@@ -84,6 +97,8 @@ int main(int argc, char const *argv[])
             remotes.push_back(path);
         }
     }
+    std::ofstream clientList;
+    clientList.open("connectedClients", std::ios::out | std::ios::trunc);
 
     auto remoteIter = remotes.begin();
 
@@ -110,7 +125,7 @@ int main(int argc, char const *argv[])
         while (getline(serversFile, line))
         {
             CDNServer server(line);
-            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), server.getIP()));
+            auto location = std::prev(IPLocations.lower_bound(IPLocation(server.getIP(), 0, 0, 0)));
             server.setLatitude(location->getLatitude());
             server.setLongitude(location->getLongitude());
             serverList.insert(server);
@@ -152,13 +167,13 @@ int main(int argc, char const *argv[])
         if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
         {
             std::cout << "I know that one" << std::endl;
-            DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
+            DNSMessage response(query.getIdentification(), 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
             unsigned int clientIP = htonl(clientAddress.sin_addr.s_addr);
             struct serverStats optimalServer;
             if (auto it = matchedServer.find(clientIP); it == matchedServer.end())
             {
-                auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), clientIP));
+                auto location = std::prev(IPLocations.lower_bound(IPLocation(htonl(clientAddress.sin_addr.s_addr), 0, 0, 0)));
                 const CDNServer *chosenServer;
                 long double optimalDistance = 100000;
                 for (auto &&server : serverList)
@@ -174,6 +189,7 @@ int main(int argc, char const *argv[])
                 optimal.server = chosenServer;
                 optimal.ping = DBL_MAX;
                 optimal.ttl = 10;
+                clientList << inet_ntoa(clientAddress.sin_addr) << std::endl;
                 matchedServer.insert({clientIP, optimal});
                 optimalServer = optimal;
             }
@@ -192,9 +208,7 @@ int main(int argc, char const *argv[])
         }
 
         // SCAMPER
-        int commandPipe[2];
         int resultsPipe[2];
-        pipe(commandPipe);
         pipe(resultsPipe);
 
         if (remoteIter == remotes.end())
@@ -205,9 +219,7 @@ int main(int argc, char const *argv[])
         int pid = fork();
         if (pid == 0)
         {
-            dup2(commandPipe[0], STDIN_FILENO);
             dup2(resultsPipe[1], STDOUT_FILENO);
-            ::close(commandPipe[1]);
             ::close(resultsPipe[0]);
             const char *exec[] = {"./scamperScript",
                                   remoteIter->c_str(),
@@ -215,12 +227,9 @@ int main(int argc, char const *argv[])
             execvp(exec[0], (char *const *)exec);
             exit(EXIT_FAILURE);
         }
+        remoteIter = std::next(remoteIter);
         int status;
-        ::close(commandPipe[0]);
         ::close(resultsPipe[1]);
-        std::string command("ping 8.8.8.8\n");
-        ::write(commandPipe[1], command.c_str(), command.length());
-        ::close(commandPipe[1]);
         waitpid(pid, &status, 0);
         char scamperBuffer[5000];
         int scamperRC = read(resultsPipe[0], scamperBuffer, 5000);
@@ -231,13 +240,15 @@ int main(int argc, char const *argv[])
             JSONString *type = (JSONString *)json.getData().at("type");
             if (type->getValue().compare("ping") == 0)
             {
-                int srcAddr, dstAddr;
+                unsigned int srcAddr, dstAddr;
                 JSONString *src = (JSONString *)json.getData().at("src");
                 JSONString *dst = (JSONString *)json.getData().at("dst");
                 inet_pton(AF_INET, src->getValue().c_str(), &srcAddr);
                 inet_pton(AF_INET, dst->getValue().c_str(), &dstAddr);
+                srcAddr = ntohl(srcAddr);
+                dstAddr = ntohl(dstAddr);
                 JSONJson *statistics = (JSONJson *)json.getData().at("statistics");
-                JSONJson *avg = (JSONJson *)statistics->getData().at("avg");
+                JSONFloat *avg = (JSONFloat *)statistics->getValue().getData().at("avg");
                 struct serverStats *stats = &matchedServer.find(dstAddr)->second;
                 if (stats->server->getIP() == srcAddr)
                 {
@@ -248,9 +259,17 @@ int main(int argc, char const *argv[])
                 {
                     if (stats->ping > avg->getValue())
                     {
-                        stats->server =
+                        auto newServer = std::find_if(serverList.begin(), serverList.end(), find_by_ip(srcAddr));
+                        if (newServer != serverList.end())
+                        {
+                            stats->server = (CDNServer *)&newServer;
+                            stats->ping = avg->getValue();
+                            stats->ttl = 10;
+                        }
                     }
                 }
+                matchedServer.erase(dstAddr);
+                matchedServer.insert({dstAddr, *stats});
             }
         }
     }
