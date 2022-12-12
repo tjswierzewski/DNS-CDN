@@ -4,6 +4,9 @@
 #include <cstring>
 #include "DNSMessage.h"
 
+/**
+ * Create DNS Message from attributes
+ */
 DNSMessage::DNSMessage(unsigned short int identification, int qr, int opcode, int aa, int tc, int rd, int ra, int rcode, unsigned short int numberOfQuestions, unsigned short int numberOfAnswerRecords, unsigned short int numberOfAuthorityRecords, unsigned short int numberOfAdditionalRecords)
 {
     this->identification = identification;
@@ -19,6 +22,9 @@ DNSMessage::DNSMessage(unsigned short int identification, int qr, int opcode, in
     this->numberOfAuthorityRecords = numberOfAuthorityRecords;
     this->numberOfAdditionalRecords = numberOfAdditionalRecords;
 }
+/**
+ * Create DNS Message from char buffer
+ */
 DNSMessage::DNSMessage(char *message, int size)
 {
     this->identification = ntohs(*(uint16_t *)message);
@@ -46,54 +52,93 @@ DNSMessage::DNSMessage(char *message, int size)
         // Parse Authority Records
     }
 }
+/**
+ * Get Identification number
+ */
 int DNSMessage::getIdentification()
 {
     return this->identification;
 }
+/**
+ * QR flag
+ */
 int DNSMessage::getQR()
 {
     return this->flags >> 15;
 }
+/**
+ * OPCODE flag
+ */
 int DNSMessage::getOPCODE()
 {
     return this->flags >> 11 & 0x1111;
 }
+/**
+ * AA flag
+ */
 int DNSMessage::getAA()
 {
     return this->flags >> 10 & 0x1;
 }
+/**
+ * TC flag
+ */
 int DNSMessage::getTC()
 {
     return this->flags >> 9 & 0x1;
 }
+/**
+ * RD flag
+ */
 int DNSMessage::getRD()
 {
     return this->flags >> 8 & 0x1;
 }
+/**
+ * RA flag
+ */
 int DNSMessage::getRA()
 {
     return this->flags >> 7 & 0x1;
 }
+/**
+ * RCODE flag
+ */
 int DNSMessage::getRCODE()
 {
     return this->flags & 0x1111;
 }
+/**
+ * Get number of questions in message
+ */
 int DNSMessage::getNumberOfQuestions()
 {
     return this->numberOfQuestions;
 }
+/**
+ * Get number of answers in message
+ */
 int DNSMessage::getNumberOfAnswerRecords()
 {
     return this->numberOfAnswerRecords;
 }
+/**
+ * Get number of authority record in message
+ */
 int DNSMessage::getNumberOfAuthorityRecords()
 {
     return this->numberOfAuthorityRecords;
 }
+/**
+ * Get number of additional records in message
+ */
 int DNSMessage::getNumberOfAdditionalRecords()
 {
     return this->numberOfAdditionalRecords;
 }
+/**
+ * Get first question
+ */
 DNSQuestion *DNSMessage::getQuestion()
 {
     if (this->questions.size() <= 0)
@@ -102,16 +147,25 @@ DNSQuestion *DNSMessage::getQuestion()
     }
     return &this->questions.front();
 }
+/**
+ * Add question to message
+ */
 void DNSMessage::addQuestion(DNSQuestion question)
 {
     this->questions.push_back(question);
     this->numberOfQuestions++;
 }
+/**
+ * Add answer to message
+ */
 void DNSMessage::addAnswer(DNSResponse answer)
 {
     this->answers.push_back(answer);
     this->numberOfAnswerRecords++;
 }
+/**
+ * format DNS Message for network
+ */
 std::string DNSMessage::format()
 {
     std::string output;

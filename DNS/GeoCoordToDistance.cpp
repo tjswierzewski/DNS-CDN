@@ -1,11 +1,17 @@
 #include <math.h>
 #include "GeoCoordToDistance.h"
 
+/**
+ * Function to turn degrees to radians
+ */
 long double GeoCoordToDistance::toRadians(long double degree)
 {
     long double radianPerDegree = (M_PI) / 180;
     return radianPerDegree * degree;
 }
+/**
+ * Function to find the distance
+ */
 long double GeoCoordToDistance::toMiles(long double lat1, long double long1, long double lat2, long double long2)
 {
     lat1 = toRadians(lat1);

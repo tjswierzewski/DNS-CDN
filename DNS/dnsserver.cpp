@@ -26,6 +26,9 @@
 #include "../JSON/JSONJson.h"
 #include "../JSON/JSONFloat.h"
 
+/**
+ * Object to hold stats about matched server
+ */
 struct serverStats
 {
     const CDNServer *server;
@@ -33,23 +36,9 @@ struct serverStats
     int ttl;
 };
 
-struct find_by_ip
-{
-    find_by_ip(unsigned int ip) : ip(ip) {}
-    bool operator()(CDNServer server)
-    {
-        return server.getIP() == ip;
-    }
-
-private:
-    unsigned int ip;
-};
-
-bool checkIP(IPLocation it, int ip)
-{
-    return (it.getStartIP() < ip) && (it.getEndIP() > ip);
-}
-
+/**
+ * Parse scamper response into JSON
+ */
 std::list<JSON> parseScamperJson(std::string response)
 {
     std::list<JSON> jsonObjects;
@@ -68,6 +57,9 @@ std::list<JSON> parseScamperJson(std::string response)
     }
     return jsonObjects;
 }
+/**
+ * Main DNS Driver
+ */
 int main(int argc, char const *argv[])
 {
     if (argc != 5)
@@ -76,7 +68,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // scamper
+    // Make list of paths to scamper remotes
     std::list<std::string> remotes;
     DIR *dp;
     struct dirent *entry;
@@ -97,6 +89,8 @@ int main(int argc, char const *argv[])
             remotes.push_back(path);
         }
     }
+
+    // Open file to place client IP's in
     std::ofstream clientList;
     clientList.open("connectedClients", std::ios::out | std::ios::trunc);
 
@@ -259,7 +253,7 @@ int main(int argc, char const *argv[])
                 {
                     if (stats->ping > avg->getValue())
                     {
-                        auto newServer = std::find_if(serverList.begin(), serverList.end(), find_by_ip(srcAddr));
+                        auto newServer = std::prev(serverList.lower_bound(CDNServer(src->getValue())));
                         if (newServer != serverList.end())
                         {
                             stats->server = (CDNServer *)&newServer;

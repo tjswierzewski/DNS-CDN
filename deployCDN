@@ -32,6 +32,7 @@ EOF
 
 scp -i $keyfile ./DNS/dnsserver $username@97.107.140.73:~/DNS
 scp -i $keyfile ./DNS/servers.txt $username@97.107.140.73:~/DNS
+scp -i $keyfile ./DNS/scamperscript $username@97.107.140.73:~/DNS
 scp -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATION
 
 # #HTTP
@@ -39,7 +40,7 @@ while read server; do
     ssh -i $keyfile $username@$server <<EOF
     mkdir HTTP
     mkdir cache
-    scamper -R 97.107.140.73:25009 &
+    nohup scamper -R 97.107.140.73:25009 > scamper.out 2> scamper.err < /dev/null &
     exit
 EOF
 
