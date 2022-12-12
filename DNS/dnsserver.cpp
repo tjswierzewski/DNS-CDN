@@ -20,6 +20,8 @@
 #include "GeoCoordToDistance.h"
 #include "CDNServer.h"
 #include "IPLocation.h"
+#include "../JSON/JSON.h"
+#include "../JSON/JSONString.h"
 
 struct serverStats
 {
@@ -32,35 +34,21 @@ bool checkIP(IPLocation it, int ip)
     return (it.getStartIP() < ip) && (it.getEndIP() > ip);
 }
 
-std::list<std::map<std::string, std::string>> parseScamperJson(std::string response)
+std::list<JSON> parseScamperJson(std::string response)
 {
-    std::list<std::map<std::string, std::string>> jsonObjects;
-    int openBracket = -1;
-    int closeBracket = -1;
+    std::list<JSON> jsonObjects;
+    int lineStart = 0;
+    int newLine = 0;
     int nextOpenBracket = -1;
-    openBracket = response.find('{', closeBracket + 1);
-    nextOpenBracket = response.find('{', openBracket + 1);
-    while (openBracket != std::string::npos)
+    std::string jsonString;
+    int openQuoteKey = 0;
+    int comma = 0;
+    int colon = 0;
+    while ((newLine = response.find('\n', lineStart + 1)) != std::string::npos)
     {
-        while (nextOpenBracket != -1 && (closeBracket = response.find('}', closeBracket + 1)) > nextOpenBracket)
-        {
-            nextOpenBracket = response.find('{', nextOpenBracket + 1);
-        }
-        std::map<std::string, std::string> jsonObject;
-        std::string jsonString = response.substr(openBracket, closeBracket - openBracket + 1);
-        openBracket = nextOpenBracket;
-        int openQuoteKey = -1;
-        int closeQuoteValue = -1;
-        int colon = -1;
-        openQuoteKey = jsonString.find('"', closeQuoteValue + 1);
-        while (openQuoteKey != -1)
-        {
-            colon = jsonString.find(':', openQuoteKey + 1);
-            closeQuoteValue = jsonString.find("\",", openQuoteKey + 1);
-            jsonObject.insert({jsonString.substr(openQuoteKey + 1, colon - openQuoteKey), jsonString.substr(colon + 2, closeQuoteValue - colon - 2)});
-        }
-
-        jsonObjects.emplace_back(jsonObject);
+        jsonString = response.substr(lineStart, newLine - lineStart);
+        lineStart = newLine + 1;
+        jsonObjects.emplace_back(JSON(jsonString));
     }
     return jsonObjects;
 }
@@ -230,8 +218,16 @@ int main(int argc, char const *argv[])
         waitpid(pid, &status, 0);
         char scamperBuffer[5000];
         int scamperRC = read(resultsPipe[0], scamperBuffer, 5000);
-        std::list<std::map<std::string, std::string>> measurements = parseScamperJson(std::string(scamperBuffer, scamperRC));
         ::close(resultsPipe[0]);
+        std::list<JSON> measurements = parseScamperJson(std::string(scamperBuffer, scamperRC));
+        for (auto &&json : measurements)
+        {
+            JSONString *type = (JSONString *)json.getData().at("type");
+            if (type->getValue().compare("ping") == 0)
+            {
+                std::cout << "YES!! PLEASE!!" << std::endl;
+            }
+        }
     }
 
     return 0;

@@ -1,9 +1,10 @@
 CC = g++
 DFLAGS = -gdwarf-2 -g3 -O0 -D_GLIBCXX_DEBUG
 CFLAGS = -std=c++17
+EXTERNAL = ../JSON/json.a
 
 dnsserver: dnsserver.o DNSMessage.o DNSQuestion.o DNSResponse.o GeoCoordToDistance.o CDNServer.o IPLocation.o
-	${CC} $^ ${DFLAGS} ${CFLAGS} -o $@
+	${CC} $^ ${EXTERNAL} ${DFLAGS} ${CFLAGS} -o $@
 
 dnsserver.o: dnsserver.cpp
 	${CC} -c $< ${DFLAGS} ${CFLAGS} -o $@
