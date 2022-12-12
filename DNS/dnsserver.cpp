@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
         while (getline(serversFile, line))
         {
             CDNServer server(line);
-            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), server.getIP()));
+            auto location = std::prev(IPLocations.lower_bound(IPLocation(server.getIP(), 0, 0, 0)));
             server.setLatitude(location->getLatitude());
             server.setLongitude(location->getLongitude());
             serverList.insert(server);
@@ -89,7 +89,7 @@ int main(int argc, char const *argv[])
             DNSMessage response(query.getIdentification(), 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
 
-            auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), htonl(clientAddress.sin_addr.s_addr)));
+            auto location = std::prev(IPLocations.lower_bound(IPLocation(htonl(clientAddress.sin_addr.s_addr), 0, 0, 0)));
 
             const CDNServer *optimalServer;
             long double optimalDistance = 100000;
