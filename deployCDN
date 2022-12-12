@@ -25,6 +25,8 @@ shift $((OPTIND-1))
 ssh -i $keyfile $username@97.107.140.73 <<EOF
 mkdir DNS
 mkdir IP2LOCATION
+mkdir remotes
+nohup sc_remoted -P 25009 -U remotes > scamper.out 2> scamper.err < /dev/null &
 exit
 EOF
 
@@ -37,6 +39,7 @@ while read server; do
     ssh -i $keyfile $username@$server <<EOF
     mkdir HTTP
     mkdir cache
+    scamper -R 97.107.140.73:25009 &
     exit
 EOF
 

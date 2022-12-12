@@ -24,7 +24,7 @@
 #include "../JSON/JSON.h"
 #include "../JSON/JSONString.h"
 #include "../JSON/JSONJson.h"
-#include "../JSON/JSONfloat.h"
+#include "../JSON/JSONFloat.h"
 
 struct serverStats
 {

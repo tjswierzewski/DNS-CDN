@@ -25,11 +25,12 @@ make clean
 
 # DNS
 rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./DNS $username@97.107.140.73:~
+rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./JSON $username@97.107.140.73:~
+scp -i $keyfile Makefile $username@97.107.140.73:~
 
 ssh -i $keyfile $username@97.107.140.73 <<EOF
-cd DNS
-make -f DNS.mk clean
-make -f DNS.mk
+make clean
+make dnsserver
 exit
 EOF
 
