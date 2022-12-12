@@ -3,6 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <iomanip>
+#include <arpa/inet.h>
 #include <set>
 #include <map>
 #include <list>
@@ -22,11 +23,13 @@
 #include "IPLocation.h"
 #include "../JSON/JSON.h"
 #include "../JSON/JSONString.h"
+#include "../JSON/JSONJson.h"
 
 struct serverStats
 {
     const CDNServer *server;
     double ping;
+    int ttl;
 };
 
 bool checkIP(IPLocation it, int ip)
@@ -152,30 +155,33 @@ int main(int argc, char const *argv[])
             DNSMessage response(query.getIdentification(), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
             response.addQuestion(*question);
             unsigned int clientIP = htonl(clientAddress.sin_addr.s_addr);
-            const CDNServer *optimalServer;
+            struct serverStats optimalServer;
             if (auto it = matchedServer.find(clientIP); it == matchedServer.end())
             {
                 auto location = std::prev(std::lower_bound(IPLocations.begin(), IPLocations.end(), clientIP));
+                const CDNServer *chosenServer;
                 long double optimalDistance = 100000;
                 for (auto &&server : serverList)
                 {
                     long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
                     if (serverDistance < optimalDistance)
                     {
-                        optimalServer = &server;
+                        chosenServer = &server;
                         optimalDistance = serverDistance;
                     }
                 }
                 struct serverStats optimal;
-                optimal.server = optimalServer;
+                optimal.server = chosenServer;
                 optimal.ping = DBL_MAX;
+                optimal.ttl = 10;
                 matchedServer.insert({clientIP, optimal});
+                optimalServer = optimal;
             }
             else
             {
-                optimalServer = it->second.server;
+                optimalServer = it->second;
             }
-            DNSResponse answer(question->getName(), 1, 1, 10, 4, optimalServer->networkIP());
+            DNSResponse answer(question->getName(), 1, 1, optimalServer.ttl, 4, optimalServer.server->networkIP());
             response.addAnswer(answer);
             std::string message = response.format();
             sendto(udp_fd, message.c_str(), message.size(), 0, (sockaddr *)&clientAddress, clientAddrLen);
@@ -225,7 +231,26 @@ int main(int argc, char const *argv[])
             JSONString *type = (JSONString *)json.getData().at("type");
             if (type->getValue().compare("ping") == 0)
             {
-                std::cout << "YES!! PLEASE!!" << std::endl;
+                int srcAddr, dstAddr;
+                JSONString *src = (JSONString *)json.getData().at("src");
+                JSONString *dst = (JSONString *)json.getData().at("dst");
+                inet_pton(AF_INET, src->getValue().c_str(), &srcAddr);
+                inet_pton(AF_INET, dst->getValue().c_str(), &dstAddr);
+                JSONJson *statistics = (JSONJson *)json.getData().at("statistics");
+                JSONJson *avg = (JSONJson *)statistics->getData().at("avg");
+                struct serverStats *stats = &matchedServer.find(dstAddr)->second;
+                if (stats->server->getIP() == srcAddr)
+                {
+                    stats->ping == avg->getValue();
+                    stats->ttl *= 2;
+                }
+                else
+                {
+                    if (stats->ping > avg->getValue())
+                    {
+                        stats->server =
+                    }
+                }
             }
         }
     }

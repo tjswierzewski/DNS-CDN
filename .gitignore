@@ -8,4 +8,5 @@ khoury_rsa
 HTTP/httpserver
 .DS_Store
 *.csv
+*.a
 cache
