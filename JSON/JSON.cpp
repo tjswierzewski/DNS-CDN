@@ -24,7 +24,6 @@ JSON::JSON(std::string jsonString)
         {
             JSONString *stringValue = new JSONString(jsonString.substr(colon + 2, comma - colon - 3));
             this->data.insert({keyString, (JSONValue *)stringValue});
-            std::cout << ((JSONString *)(this->data.at(jsonString.substr(key + 1, colon - key - 2))))->getValue() << std::endl;
             break;
         }
         case '{':
@@ -56,14 +55,14 @@ JSON::JSON(std::string jsonString)
             {
                 JSONFloat *floatValue = new JSONFloat(stof(jsonString.substr(colon + 1, comma - colon - 1)));
                 this->data.insert({keyString, (JSONValue *)floatValue});
-                std::cout << ((JSONFloat *)(this->data.at(jsonString.substr(key + 1, colon - key - 2))))->getValue() << std::endl;
+
                 break;
             }
             else
             {
                 JSONInt *intValue = new JSONInt(stoi(jsonString.substr(colon + 1, comma - colon - 1)));
                 this->data.insert({keyString, (JSONValue *)intValue});
-                std::cout << ((JSONInt *)(this->data.at(jsonString.substr(key + 1, colon - key - 2))))->getValue() << std::endl;
+
                 break;
             }
         }

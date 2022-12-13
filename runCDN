@@ -22,13 +22,13 @@ done
 shift $((OPTIND-1))
 
 #start DNS server
-ssh -i $keyfile $username@97.107.140.73 <<EOF
+ssh -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73 <<EOF
 cd DNS
 nohup ./dnsserver -p $port -n $servername > DNS.out 2> DNS.err < /dev/null &
 EOF
 
 while read server; do
-    ssh -i $keyfile $username@$server <<EOF
+    ssh -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
     cd HTTP
     nohup ./httpserver -p $port -o $origin > HTTP.out 2> HTTP.err < /dev/null &
 EOF

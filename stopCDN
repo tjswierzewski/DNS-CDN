@@ -23,7 +23,7 @@ shift $((OPTIND-1))
 
 
 #Stop DNS server
-ssh -i $keyfile $username@97.107.140.73 <<EOF
+ssh -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73 <<EOF
 pkill -U $username dnsserver
 pkill -U $username sc_remoted
 pkill -U $username sc_attach
@@ -31,7 +31,7 @@ rm -r *
 EOF
 
 while read server; do
-    ssh -i $keyfile $username@$server <<EOF
+    ssh -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
     pkill -U $username httpserver
     pkill -U $username scamper
     rm -r *

@@ -8,6 +8,7 @@
 #include <map>
 #include <list>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <string>
@@ -17,6 +18,8 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <ctime>
 #include "DNSMessage.h"
 #include "GeoCoordToDistance.h"
 #include "CDNServer.h"
@@ -35,7 +38,11 @@ struct serverStats
     float ping;
     int ttl;
 };
-
+void makeUnblocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
 /**
  * Parse scamper response into JSON
  */
@@ -94,7 +101,7 @@ int main(int argc, char const *argv[])
     std::ofstream clientList;
     clientList.open("connectedClients", std::ios::out | std::ios::trunc);
 
-    auto remoteIter = remotes.begin();
+    std::time_t nextScamper = 0;
 
     // GEO LOCATION
     // Load Geo Location
@@ -152,118 +159,189 @@ int main(int argc, char const *argv[])
         perror("UDP Bind failed");
         exit(EXIT_FAILURE);
     }
+
+    makeUnblocking(udp_fd);
+
+    struct epoll_event ev, events[10];
+    int epollFD, nfds;
+
+    epollFD = epoll_create1(0);
+    if (epollFD == -1)
+    {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
+    }
+
+    ev.events = EPOLLIN;
+    ev.data.fd = udp_fd;
+    if (epoll_ctl(epollFD, EPOLL_CTL_ADD, udp_fd, &ev))
+    {
+        perror("epoll_ctl: udp_fd");
+        exit(EXIT_FAILURE);
+    }
     while (1)
     {
-        // DNS
-        int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
-        DNSMessage query(buffer, size);
-        DNSQuestion *question;
-        if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
+        nfds = epoll_wait(epollFD, events, 10, 15);
+        for (size_t n = 0; n < nfds; n++)
         {
-            std::cout << "I know that one" << std::endl;
-            DNSMessage response(query.getIdentification(), 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);
-            response.addQuestion(*question);
-            unsigned int clientIP = htonl(clientAddress.sin_addr.s_addr);
-            struct serverStats optimalServer;
-            if (auto it = matchedServer.find(clientIP); it == matchedServer.end())
+            if (events[n].events & EPOLLIN)
             {
-                auto location = std::prev(IPLocations.lower_bound(IPLocation(htonl(clientAddress.sin_addr.s_addr), 0, 0, 0)));
-                const CDNServer *chosenServer;
-                long double optimalDistance = 100000;
-                for (auto &&server : serverList)
+
+                if (events[n].data.fd == udp_fd)
                 {
-                    long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
-                    if (serverDistance < optimalDistance)
+                    // DNS
+                    int size = recvfrom(udp_fd, buffer, 1024, 0, (sockaddr *)&clientAddress, (socklen_t *)&clientAddrLen);
+                    DNSMessage query(buffer, size);
+                    DNSQuestion *question;
+                    if (question = query.getQuestion(), question && question->getName().compare(argv[4]) == 0)
                     {
-                        chosenServer = &server;
-                        optimalDistance = serverDistance;
+                        std::cout << "I know that one" << std::endl;
+                        DNSMessage response(query.getIdentification(), 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);
+                        response.addQuestion(*question);
+                        unsigned int clientIP = htonl(clientAddress.sin_addr.s_addr);
+                        struct serverStats optimalServer;
+                        if (auto it = matchedServer.find(clientIP); it == matchedServer.end())
+                        {
+                            auto location = std::prev(IPLocations.lower_bound(IPLocation(htonl(clientAddress.sin_addr.s_addr), 0, 0, 0)));
+                            const CDNServer *chosenServer;
+                            long double optimalDistance = 100000;
+                            for (auto &&server : serverList)
+                            {
+                                long double serverDistance = GeoCoordToDistance::toMiles(server.getLatitude(), server.getLongitude(), location->getLatitude(), location->getLongitude());
+                                if (serverDistance < optimalDistance)
+                                {
+                                    chosenServer = &server;
+                                    optimalDistance = serverDistance;
+                                }
+                            }
+                            struct serverStats optimal;
+                            optimal.server = chosenServer;
+                            optimal.ping = DBL_MAX;
+                            optimal.ttl = 10;
+                            clientList << inet_ntoa(clientAddress.sin_addr) << std::endl;
+                            matchedServer.insert({clientIP, optimal});
+                            optimalServer = optimal;
+                        }
+                        else
+                        {
+                            optimalServer = it->second;
+                        }
+                        DNSResponse answer(question->getName(), 1, 1, optimalServer.ttl, 4, optimalServer.server->networkIP());
+                        response.addAnswer(answer);
+                        std::string message = response.format();
+                        sendto(udp_fd, message.c_str(), message.size(), 0, (sockaddr *)&clientAddress, clientAddrLen);
                     }
-                }
-                struct serverStats optimal;
-                optimal.server = chosenServer;
-                optimal.ping = DBL_MAX;
-                optimal.ttl = 10;
-                clientList << inet_ntoa(clientAddress.sin_addr) << std::endl;
-                matchedServer.insert({clientIP, optimal});
-                optimalServer = optimal;
-            }
-            else
-            {
-                optimalServer = it->second;
-            }
-            DNSResponse answer(question->getName(), 1, 1, optimalServer.ttl, 4, optimalServer.server->networkIP());
-            response.addAnswer(answer);
-            std::string message = response.format();
-            sendto(udp_fd, message.c_str(), message.size(), 0, (sockaddr *)&clientAddress, clientAddrLen);
-        }
-        else
-        {
-            std::cout << "I don't know that one" << std::endl;
-        }
-
-        // SCAMPER
-        int resultsPipe[2];
-        pipe(resultsPipe);
-
-        if (remoteIter == remotes.end())
-        {
-            remoteIter = remotes.begin();
-        }
-
-        int pid = fork();
-        if (pid == 0)
-        {
-            dup2(resultsPipe[1], STDOUT_FILENO);
-            ::close(resultsPipe[0]);
-            const char *exec[] = {"./scamperScript",
-                                  remoteIter->c_str(),
-                                  NULL};
-            execvp(exec[0], (char *const *)exec);
-            exit(EXIT_FAILURE);
-        }
-        remoteIter = std::next(remoteIter);
-        int status;
-        ::close(resultsPipe[1]);
-        waitpid(pid, &status, 0);
-        char scamperBuffer[5000];
-        int scamperRC = read(resultsPipe[0], scamperBuffer, 5000);
-        ::close(resultsPipe[0]);
-        std::list<JSON> measurements = parseScamperJson(std::string(scamperBuffer, scamperRC));
-        for (auto &&json : measurements)
-        {
-            JSONString *type = (JSONString *)json.getData().at("type");
-            if (type->getValue().compare("ping") == 0)
-            {
-                unsigned int srcAddr, dstAddr;
-                JSONString *src = (JSONString *)json.getData().at("src");
-                JSONString *dst = (JSONString *)json.getData().at("dst");
-                inet_pton(AF_INET, src->getValue().c_str(), &srcAddr);
-                inet_pton(AF_INET, dst->getValue().c_str(), &dstAddr);
-                srcAddr = ntohl(srcAddr);
-                dstAddr = ntohl(dstAddr);
-                JSONJson *statistics = (JSONJson *)json.getData().at("statistics");
-                JSONFloat *avg = (JSONFloat *)statistics->getValue().getData().at("avg");
-                struct serverStats *stats = &matchedServer.find(dstAddr)->second;
-                if (stats->server->getIP() == srcAddr)
-                {
-                    stats->ping == avg->getValue();
-                    stats->ttl *= 2;
+                    else
+                    {
+                        std::cout << "I don't know that one" << std::endl;
+                    }
                 }
                 else
                 {
-                    if (stats->ping > avg->getValue())
+                    char scamperBuffer[5000];
+                    int scamperRC = read(events[n].data.fd, scamperBuffer, 5000);
+                    if (scamperRC == -1)
                     {
-                        auto newServer = std::prev(serverList.lower_bound(CDNServer(src->getValue())));
-                        if (newServer != serverList.end())
+                        continue;
+                    }
+
+                    if (scamperRC == 0)
+                    {
+                        ev.events = EPOLLHUP;
+                        ev.data.fd = events[n].data.fd;
+                        if (epoll_ctl(epollFD, EPOLL_CTL_ADD, events[n].data.fd, &ev))
                         {
-                            stats->server = (CDNServer *)&newServer;
-                            stats->ping = avg->getValue();
-                            stats->ttl = 10;
+                            perror("epoll_ctl: delete scamper");
+                            exit(EXIT_FAILURE);
+                        }
+                        continue;
+                    }
+
+                    std::list<JSON> measurements = parseScamperJson(std::string(scamperBuffer, scamperRC));
+                    for (auto &&json : measurements)
+                    {
+                        JSONString *type = (JSONString *)json.getData().at("type");
+                        if (type->getValue().compare("ping") == 0)
+                        {
+                            unsigned int srcAddr, dstAddr;
+                            JSONString *src = (JSONString *)json.getData().at("src");
+                            JSONString *dst = (JSONString *)json.getData().at("dst");
+                            inet_pton(AF_INET, src->getValue().c_str(), &srcAddr);
+                            inet_pton(AF_INET, dst->getValue().c_str(), &dstAddr);
+                            srcAddr = ntohl(srcAddr);
+                            dstAddr = ntohl(dstAddr);
+                            JSONJson *statistics = (JSONJson *)json.getData().at("statistics");
+                            JSONFloat *avg = (JSONFloat *)statistics->getValue().getData().at("avg");
+                            struct serverStats *stats = &matchedServer.find(dstAddr)->second;
+                            if (stats->server->getIP() == srcAddr)
+                            {
+                                stats->ping == avg->getValue();
+                                stats->ttl *= 2;
+                            }
+                            else
+                            {
+                                if (stats->ping > avg->getValue())
+                                {
+                                    CDNServer searchServer(src->getValue());
+                                    std::set<CDNServer>::iterator newServer = serverList.lower_bound(searchServer);
+                                    if (newServer != serverList.end())
+                                    {
+                                        stats->server = (CDNServer *)&(*newServer);
+                                        stats->ping = avg->getValue();
+                                        stats->ttl = 10;
+                                    }
+                                }
+                            }
+                            matchedServer.erase(dstAddr);
+                            matchedServer.insert({dstAddr, *stats});
                         }
                     }
                 }
-                matchedServer.erase(dstAddr);
-                matchedServer.insert({dstAddr, *stats});
+            }
+            if (events[n].events == EPOLLHUP)
+            {
+                ev.events = EPOLLOUT;
+                ev.data.fd = events[n].data.fd;
+                if (epoll_ctl(epollFD, EPOLL_CTL_DEL, events[n].data.fd, &ev))
+                {
+                    perror("epoll_ctl: delete");
+                    exit(EXIT_FAILURE);
+                }
+                close(events[n].data.fd);
+                continue;
+            }
+        }
+
+        if (nextScamper < std::time(NULL) && matchedServer.size() > 0)
+        {
+
+            // SCAMPER
+            nextScamper += std::time(NULL) + (15);
+            for (auto &&remoteIter : remotes)
+            {
+                int resultsPipe[2];
+                pipe(resultsPipe);
+                int pid = fork();
+                if (pid == 0)
+                {
+                    dup2(resultsPipe[1], STDOUT_FILENO);
+                    ::close(resultsPipe[0]);
+                    const char *exec[] = {"./scamperScript",
+                                          remoteIter.c_str(),
+                                          NULL};
+                    execvp(exec[0], (char *const *)exec);
+                    exit(EXIT_FAILURE);
+                }
+                int status;
+                ::close(resultsPipe[1]);
+                makeUnblocking(resultsPipe[0]);
+                ev.events = EPOLLIN;
+                ev.data.fd = resultsPipe[0];
+                if (epoll_ctl(epollFD, EPOLL_CTL_ADD, resultsPipe[0], &ev))
+                {
+                    perror("epoll_ctl: scamper");
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }
