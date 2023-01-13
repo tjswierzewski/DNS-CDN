@@ -1,0 +1,41 @@
+#!/bin/bash
+
+while getopts 'p:o:n:u:i:' OPTION; do
+    case "$OPTION" in
+        p)
+            port=${OPTARG}
+            ;;
+        o)
+            origin=${OPTARG}
+            ;;
+        i)
+            keyfile=${OPTARG}
+            ;;
+        n)
+            servername=${OPTARG}
+            ;;
+        u)
+            username=${OPTARG}
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+make clean
+
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+mkdir DNS
+mkdir IP2LOCATION
+exit
+EOF
+
+rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./DNS $username@97.107.140.73:~
+rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./JSON $username@97.107.140.73:~
+scp -i $keyfile Makefile $username@97.107.140.73:~
+scp -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATION
+
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+make clean
+make
+exit
+EOF

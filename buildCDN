@@ -25,15 +25,16 @@ make clean
 
 # DNS
 rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./DNS $username@97.107.140.73:~
+rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./JSON $username@97.107.140.73:~
+scp -i $keyfile Makefile $username@97.107.140.73:~
 
-ssh -i $keyfile $username@97.107.140.73 <<EOF
-cd DNS
-make -f DNS.mk clean
-make -f DNS.mk
+ssh -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73 <<EOF
+make clean
+make dnsserver
 exit
 EOF
 
-scp -i $keyfile $username@97.107.140.73:DNS/dnsserver ./DNS
+scp -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73:DNS/dnsserver ./DNS
 
 ssh -i $keyfile $username@97.107.140.73 <<EOF
 rm -r *
@@ -41,7 +42,7 @@ exit
 EOF
 
 #HTTP
-rsync -a --exclude=".*" -e  "ssh -i $keyfile" ./HTTP $username@173.255.210.124:~
+rsync -a --exclude=".*" -e  "ssh -o StrictHostKeyChecking=no -i $keyfile" ./HTTP $username@173.255.210.124:~
 
 ssh -i $keyfile $username@173.255.210.124 <<EOF
 cd HTTP
@@ -50,7 +51,7 @@ make -f HTTP.mk
 exit
 EOF
 
-scp -i $keyfile $username@173.255.210.124:HTTP/httpserver ./HTTP
+scp -o StrictHostKeyChecking=no -i $keyfile $username@173.255.210.124:HTTP/httpserver ./HTTP
 
 ssh -i $keyfile $username@173.255.210.124 <<EOF
 rm -r *

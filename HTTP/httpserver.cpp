@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 #include <fstream>
 #include <sstream>
 #include <sys/epoll.h>
@@ -93,19 +94,27 @@ int main(int argc, char const *argv[])
         }
         for (size_t i = 0; i < nfds; i++)
         {
-            if (events[i].events == EPOLLIN)
+            if (events[i].events & EPOLLIN)
             {
                 if (events[i].data.fd == listen_sock)
                 {
-                    HTTPSession session(listen_sock);
-                    int conn_sock = session.getFD();
-                    openSessions.insert({conn_sock, session});
-                    ev.events = EPOLLIN | EPOLLET;
-                    ev.data.fd = conn_sock;
-                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+                    try
                     {
-                        perror("epoll_ctl: conn_sock");
-                        exit(EXIT_FAILURE);
+                        HTTPSession session(listen_sock, epollfd);
+                        int conn_sock = session.getFD();
+                        openSessions.insert({conn_sock, session});
+                        ev.events = EPOLLIN | EPOLLET;
+                        ev.data.fd = conn_sock;
+                        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+                        {
+                            perror("epoll_ctl: conn_sock");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    catch (const std::exception &e)
+                    {
+                        std::cerr << e.what() << '\n';
+                        continue;
                     }
                 }
                 else
@@ -129,6 +138,7 @@ int main(int argc, char const *argv[])
                             {
                                 path = "index.html";
                             }
+                            std::cout << path << std::endl;
                             if (checkCache(path) > -1)
                             {
                                 std::ifstream file(std::string("../cache/").append(path));
@@ -138,19 +148,35 @@ int main(int argc, char const *argv[])
                                 file.close();
                                 HTTPResponseMessage response = HTTPResponseMessage(request->getVersion(), 200, "OK", headers);
                                 response.setData(buffer.str());
-                                std::cout << "THIS IS CACHED" << std::endl;
                                 session.write(&response);
                             }
                             else
                             {
-                                HTTPSession origin(argv[4], "8080");
+                                HTTPSession origin(argv[4], "8080", -1);
+                                std::cout << "Get page from origin" << std::endl;
                                 HTTPResponseMessage *page = origin.get(request->getPath());
+                                close(origin.getFD());
                                 // send page to client
+                                std::cout << "write to client" << std::endl;
                                 session.write(page);
                             }
                         }
                     }
                 }
+            }
+            if (events[i].events == EPOLLHUP || events[i].events == EPOLLERR)
+            {
+                ev.events = EPOLLOUT;
+                ev.data.fd = events[i].data.fd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[i].data.fd, &ev))
+                {
+                    perror("epoll_ctl: delete");
+                    exit(EXIT_FAILURE);
+                }
+                openSessions.erase(events[i].data.fd);
+                std::cout << "close: " << events[i].data.fd << std::endl;
+                ::close(events[i].data.fd);
+                continue;
             }
         }
     }

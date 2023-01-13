@@ -22,33 +22,42 @@ done
 shift $((OPTIND-1))
 
 # DNS
-ssh -i $keyfile $username@97.107.140.73 <<EOF
+ssh -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73 <<EOF
 mkdir DNS
 mkdir IP2LOCATION
+mkdir remotes
+nohup sc_remoted -P $port -U remotes > scamper.out 2> scamper.err < /dev/null &
 exit
 EOF
 
-scp -i $keyfile ./DNS/dnsserver $username@97.107.140.73:~/DNS
-scp -i $keyfile ./DNS/servers.txt $username@97.107.140.73:~/DNS
-scp -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATION
+rm IP2LOCATION/IPLocation.csv
+unzip IP2LOCATION/IPLocation.csv.comp -d IP2LOCATION
+
+
+scp -o StrictHostKeyChecking=no -i $keyfile ./DNS/dnsserver $username@97.107.140.73:~/DNS
+scp -o StrictHostKeyChecking=no -i $keyfile ./DNS/servers.txt $username@97.107.140.73:~/DNS
+scp -o StrictHostKeyChecking=no -i $keyfile ./DNS/scamperScript $username@97.107.140.73:~/DNS
+scp -o StrictHostKeyChecking=no -i $keyfile ./IP2LOCATION/IPLocation.csv $username@97.107.140.73:~/IP2LOCATION &
 
 # #HTTP
 while read server; do
-    ssh -i $keyfile $username@$server <<EOF
+    ssh -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
     mkdir HTTP
     mkdir cache
+    nohup scamper -R 97.107.140.73:$port > scamper.out 2> scamper.err < /dev/null &
     exit
 EOF
 
-    scp -i $keyfile ./HTTP/httpserver $username@$server:HTTP
-    scp -i $keyfile ./downloadCache $username@$server:~
-    scp -i $keyfile ./pageviews.csv $username@$server:~
+    scp -o StrictHostKeyChecking=no -i $keyfile ./HTTP/httpserver $username@$server:HTTP
+    scp -o StrictHostKeyChecking=no -i $keyfile ./downloadCache $username@$server:~
+    scp -o StrictHostKeyChecking=no -i $keyfile ./pageviews.csv $username@$server:~
 
 
-    ssh -i $keyfile $username@$server <<EOF
+    (ssh -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
     ./downloadCache
     rm downloadCache
     rm pageviews.csv
     exit
 EOF
+    ) &
 done < ./DNS/servers.txt

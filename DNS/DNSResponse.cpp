@@ -2,6 +2,9 @@
 #include <string>
 #include "DNSResponse.h"
 
+/**
+ * Create DNS response from attributes
+ */
 DNSResponse::DNSResponse(std::string name, unsigned short int type, unsigned short int dnsClass, unsigned int ttl, unsigned short int dataLength, std::string data)
 {
     this->name = name;
@@ -11,6 +14,9 @@ DNSResponse::DNSResponse(std::string name, unsigned short int type, unsigned sho
     this->dataLength = dataLength;
     this->data = data;
 }
+/**
+ * Format DNS response for network
+ */
 std::string DNSResponse::format()
 {
     std::string output;
