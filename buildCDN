@@ -36,10 +36,10 @@ EOF
 
 scp -o StrictHostKeyChecking=no -i $keyfile $username@97.107.140.73:DNS/dnsserver ./DNS
 
-# ssh -i $keyfile $username@97.107.140.73 <<EOF
-# rm -r *
-# exit
-# EOF
+ssh -i $keyfile $username@97.107.140.73 <<EOF
+rm -r *
+exit
+EOF
 
 #HTTP
 rsync -a --exclude=".*" -e  "ssh -o StrictHostKeyChecking=no -i $keyfile" ./HTTP $username@173.255.210.124:~

@@ -31,9 +31,10 @@ rm -r *
 EOF
 
 while read server; do
-    ssh -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
+    ssh -q -o StrictHostKeyChecking=no -i $keyfile $username@$server <<EOF
     pkill -U $username httpserver
     pkill -U $username scamper
+    pkill -U $username downloadCache
     rm -r *
 EOF
 done < ./DNS/servers.txt

@@ -33,3 +33,5 @@ while read server; do
     nohup ./httpserver -p $port -o $origin > HTTP.out 2> HTTP.err < /dev/null &
 EOF
 done < ./DNS/servers.txt
+
+sleep 120

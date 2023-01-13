@@ -1,0 +1,5 @@
+./stopCDN -i khoury_rsa -u timski -p 25009 -n cs5700cdn.example.com -o cs5700cdnorigin.ccs.neu.edu
+./buildCDN -i khoury_rsa -u timski -p 25009 -n cs5700cdn.example.com -o cs5700cdnorigin.ccs.neu.edu
+./deployCDN -i khoury_rsa -u timski -p 25009 -n cs5700cdn.example.com -o cs5700cdnorigin.ccs.neu.edu
+./runCDN -i khoury_rsa -u timski -p 25009 -n cs5700cdn.example.com -o cs5700cdnorigin.ccs.neu.edu
+./dnsget

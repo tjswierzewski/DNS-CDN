@@ -50,17 +50,23 @@ JSON::JSON(std::string jsonString)
         }
         default:
         {
+            std::string num = jsonString.substr(colon + 1, comma - colon - 1);
+            while (!isdigit(num.back()))
+            {
+                num.pop_back();
+            }
+
             int period = jsonString.find('.', colon);
             if (period != -1 && period < comma)
             {
-                JSONFloat *floatValue = new JSONFloat(stof(jsonString.substr(colon + 1, comma - colon - 1)));
+                JSONFloat *floatValue = new JSONFloat(stof(num));
                 this->data.insert({keyString, (JSONValue *)floatValue});
 
                 break;
             }
             else
             {
-                JSONInt *intValue = new JSONInt(stoi(jsonString.substr(colon + 1, comma - colon - 1)));
+                JSONInt *intValue = new JSONInt(stoi(num));
                 this->data.insert({keyString, (JSONValue *)intValue});
 
                 break;

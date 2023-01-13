@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/epoll.h>
 #include <netdb.h>
 #include <string>
 #include <string.h>
@@ -19,8 +20,9 @@
 /**
  * Create HTTP Session from listen socket
  */
-HTTPSession::HTTPSession(int fd)
+HTTPSession::HTTPSession(int fd, int epoll)
 {
+    this->epoll = epoll;
     this->fd = this->acceptConnection(fd);
     if (this->fd < 0)
     {
@@ -30,8 +32,9 @@ HTTPSession::HTTPSession(int fd)
 /**
  * Create HTTPS Session connected to provided host
  */
-HTTPSession::HTTPSession(const char *host, const char *port)
+HTTPSession::HTTPSession(const char *host, const char *port, int epoll)
 {
+    this->epoll = epoll;
     this->host = host;
     this->port = port;
     this->fd = connectToHost();
@@ -118,39 +121,65 @@ HTTPResponseMessage *HTTPSession::get(std::string path)
  */
 void HTTPSession::write(HTTPMessage *message)
 {
-    int rc;
+    int rc = 0;
     if (!this->cookies.empty())
     {
         message->setHeader("Cookie", this->sendCookies());
     }
     if (message->getDataLength() != 0)
     {
-        message->setHeader("Content-Length", std::to_string(message->getDataLength()));
         message->removeHeader("Transfer-Encoding");
+        for (auto &[key, value] : message->getHeaders())
+        {
+            if (key == "Content-Length")
+            {
+                message->removeHeader("Content-Length");
+            }
+        }
+        message->setHeader("Content-Length", std::to_string(message->getDataLength()));
     }
     std::string output = message->format();
-    rc = ::write(this->fd, output.c_str(), output.length());
+    std::cout << output.length() << std::endl;
+    for (auto &[key, value] : message->getHeaders())
+    {
+        if (key == "Content-Length")
+        {
+            std::cout << "c-length" << value << std::endl;
+        }
+    }
+
+    int timeout = 0;
+    char *out_buffer = (char *)output.c_str();
+    int out_count = output.length();
     while (rc < output.length())
     {
-        int temp = ::write(this->fd, (char *)output.c_str() + rc, output.length() - rc);
+        int temp = ::write(this->fd, out_buffer + rc, out_count - rc);
+        std::cout << "write fd = " << this->fd << std::endl;
+        std::cout << "write temp = " << temp << std::endl;
+        std::cout << "write rc = " << rc << std::endl;
+        std::cout << "write errno = " << errno << std::endl;
         if (temp < 0)
         {
+            perror("write");
             if (errno == 11)
             {
-                continue;
+                if (timeout < 10)
+                {
+                    std::cout << "write timeout = " << timeout << std::endl;
+                    timeout++;
+                }
+                else
+                {
+                    return;
+                }
             }
-            else
-            {
-                close(this->fd);
-                // remove from epoll
-            }
+
+            continue;
         }
         else
         {
             rc += temp;
         }
-        std::cout << "rc: " << rc << std::endl;
-        std::cout << "errno: " << errno << std::endl;
     }
 }
 
@@ -219,18 +248,26 @@ HTTPMessage *HTTPSession::read(int type)
     char buffer[BUFFER_SIZE];
     std::ostringstream input;
     int rc = 0;
+    std::cout << "read" << std::endl;
     while (input.str().find("\r\n\r\n") == std::string::npos)
     {
         rc += ::read(this->fd, buffer + rc, 1);
         if (rc == 0)
         {
+            std::cout << "read rc = " << rc << std::endl;
+            std::cout << "read errno = " << errno << std::endl;
+            if (errno == 0)
+            {
+                return NULL;
+            }
+            perror("read");
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 return NULL;
             }
-            else if (errno == 2 | errno == 0)
+            else if (errno == 2 | errno == 9)
             {
-                close(this->fd);
+                std::cout << "WELCOME TO THE DANGER ZONE" << std::endl;
                 return NULL;
             }
             else
@@ -269,7 +306,6 @@ HTTPMessage *HTTPSession::read(int type)
             rc += ::read(this->fd, size + rc, 1);
             if (rc == 0 && errno == 0)
             {
-                close(this->fd);
                 return NULL;
             }
             sizeString << size[rc - 1];
